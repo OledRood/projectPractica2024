@@ -1,64 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
-import '../bloc/main_bloc.dart';
+import '../bloc/bloc.dart';
 import '../resources/app_colors.dart';
 
-var alert = true;
+var alert = false;
 
 var vacancyController = TextEditingController();
 var ageController = TextEditingController();
 var sourceController = TextEditingController();
 var nameController = TextEditingController();
+var commentsController = TextEditingController();
 
-class CreateResumePage extends StatefulWidget {
+
+
+class CreateResumePage extends StatelessWidget {
   const CreateResumePage({super.key});
 
   @override
-  State<CreateResumePage> createState() => _CreateResumePageState();
-}
-
-class _CreateResumePageState extends State<CreateResumePage> {
-  late MainBloc mainBloc;
-
-  @override
-  void initState() {
-    super.initState();
-    // выдавать ошибку при перезагрузке
-    // html.window.onBeforeUnload.listen((event) {
-    //   // Создаем предупреждающее сообщение
-    //   event.preventDefault();
-    //   // event.returnValue = ''; // Необходимо для работы диалога в некоторых браузерах
-    // });
-    mainBloc = MainBloc();
-
-    // Обработчик для события "Назад"
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Provider.value(value: mainBloc, child: PageContent());
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    vacancyController.text = '';
+    ageController.text = '';
+    sourceController.text = '';
+    nameController.text = '';
+    commentsController.text = '';
+    bloc.cleanResumeControllers();
+    return CreateResumePageContent();
   }
 }
 
-class PageContent extends StatefulWidget {
-  const PageContent({
+
+
+class CreateResumePageContent extends StatefulWidget {
+  const CreateResumePageContent({
     super.key,
   });
 
   @override
-  State<PageContent> createState() => _PageContentState();
+  State<CreateResumePageContent> createState() => _CreateResumePageContentState();
 }
 
-class _PageContentState extends State<PageContent> {
+class _CreateResumePageContentState extends State<CreateResumePageContent> {
   @override
   Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     return Scaffold(
       backgroundColor: AppColors.color50,
       body: alert
           ? AlertDialogWidget(
+              ExitTap: () {
+                ExitVoid(bloc, context);
+              },
               onTapStay: () {
                 setState(() {
                   alert = false;
@@ -77,7 +71,7 @@ class _PageContentState extends State<PageContent> {
                       mainAxisSize: MainAxisSize.max,
                       children: [
                         SizedBox(
-                          height: 317,
+                          height: 487.5,
                         ),
                         ExitWidget(
                           onTap: () {
@@ -89,12 +83,7 @@ class _PageContentState extends State<PageContent> {
                                 alert = true;
                               });
                             } else {
-                              ageController.clear();
-                              sourceController.clear();
-                              vacancyController.clear();
-                              nameController.clear();
-                              alert = false;
-                              Navigator.pop(context);
+                              ExitVoid(bloc, context);
                             }
                           },
                         ),
@@ -117,7 +106,7 @@ class _PageContentState extends State<PageContent> {
                         TextStateWidget(),
                         const SizedBox(height: 20),
                         InputTextWidget(
-                          text: "Имя",
+                          text: "ФИО",
                           controller: nameController,
                           isAge: false,
                         ),
@@ -138,6 +127,9 @@ class _PageContentState extends State<PageContent> {
                             controller: sourceController,
                             isAge: false),
                         const SizedBox(height: 20),
+                        CommentsInputWidget(),
+                        const SizedBox(height: 20),
+
                         SendResumeButton(),
                       ],
                     ),
@@ -147,18 +139,33 @@ class _PageContentState extends State<PageContent> {
             ),
     );
   }
+
+  void ExitVoid(Bloc bloc, context) {
+    ageController.clear();
+    sourceController.clear();
+    vacancyController.clear();
+    nameController.clear();
+    commentsController.clear();
+    bloc.cancelCreateSubscription();
+    alert = false;
+    Navigator.pop(context);
+  }
 }
 
 class AlertDialogWidget extends StatelessWidget {
+  final VoidCallback ExitTap;
   final VoidCallback onTapStay;
 
   const AlertDialogWidget({
     super.key,
     required this.onTapStay,
+    required this.ExitTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+
     return Center(
         child: Container(
       height: 150,
@@ -183,15 +190,7 @@ class AlertDialogWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                  onTap: () {
-                    ageController.clear();
-                    sourceController.clear();
-                    vacancyController.clear();
-                    nameController.clear();
-                    alert = false;
-                    Navigator.pop(context);
-                  },
-                  child: ButtonOnAlertDialog(text: "Выйти")),
+                  onTap: ExitTap, child: ButtonOnAlertDialog(text: "Выйти")),
               GestureDetector(
                 onTap: onTapStay,
                 child: ButtonOnAlertDialog(text: "Остаться"),
@@ -251,12 +250,6 @@ class ExitWidget extends StatelessWidget {
           Icons.logout,
           color: Colors.white,
         ),
-        // child: Text(
-        //   'Выход',
-        //   style: TextStyle(
-        //     color: Colors.white,
-        //   ),
-        // ),
       ),
     );
   }
@@ -269,9 +262,9 @@ class TextStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     return StreamBuilder(
-        stream: bloc.stateButtonLoading,
+        stream: bloc.observeStateCreateButton(),
         builder: (context, snapshot) {
           switch (snapshot.data) {
             case null:
@@ -281,12 +274,13 @@ class TextStateWidget extends StatelessWidget {
               return MainTextWidget(text: 'Загруза резюме');
             case StateRequest.error:
               return MainTextWidget(text: "Ошибка");
-            case StateRequest.idError:
-              return MainTextWidget(text: "Перезайдите");
+            // case StateRequest.idError:
+            //   return MainTextWidget(text: "Перезайдите");
             case StateRequest.good:
               return MainTextWidget(text: "Резюме добавлено");
+            default:
+              return MainTextWidget(text: "Добавить резюме");
           }
-          return MainTextWidget(text: "Добавить резюме");
         });
   }
 }
@@ -309,92 +303,6 @@ class MainTextWidget extends StatelessWidget {
   }
 }
 
-class SendResumeButtonView extends StatefulWidget {
-  const SendResumeButtonView({super.key});
-
-  @override
-  State<SendResumeButtonView> createState() => _SendResumeButtonViewState();
-}
-
-class _SendResumeButtonViewState extends State<SendResumeButtonView> {
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
-}
-
-class SendResumeButton extends StatelessWidget {
-  const SendResumeButton({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
-
-    return StreamBuilder<StateRequest>(
-        stream: bloc.stateButtonLoading,
-        builder: (context, snapshot) {
-          if (snapshot.data == StateRequest.loading ||
-              snapshot.data == StateRequest.idError) {
-            return ButtonWidget(onTap: () {}, color: AppColors.color100);
-          }
-
-          if (snapshot.data == StateRequest.good) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ageController.clear();
-              sourceController.clear();
-              vacancyController.clear();
-              nameController.clear();
-            });
-          }
-          return ButtonWidget(
-            onTap: () {
-              if (ageController.text != "") {
-                bloc.vacancyControllerSubject.add(vacancyController.text);
-                bloc.nameControllerSubject.add(nameController.text);
-                bloc.ageControllerSubject.add(int.parse(ageController.text));
-                bloc.sourceControllerSubject.add(sourceController.text);
-              }
-            },
-            color: AppColors.color900,
-          );
-        });
-  }
-}
-
-class ButtonWidget extends StatelessWidget {
-  final VoidCallback onTap;
-  final Color color;
-
-  const ButtonWidget({
-    super.key,
-    required this.onTap,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        alignment: Alignment.center,
-        width: 350,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Text("Добавить",
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w400)),
-      ),
-    );
-  }
-}
-
 class InputTextWidget extends StatefulWidget {
   final String text;
   final TextEditingController controller;
@@ -412,10 +320,8 @@ class InputTextWidget extends StatefulWidget {
 }
 
 class _InputTextWidgetState extends State<InputTextWidget> {
-
   @override
   Widget build(BuildContext context) {
-    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
     return Container(
       width: 350,
       height: 40,
@@ -456,8 +362,140 @@ class _InputTextWidgetState extends State<InputTextWidget> {
             border: InputBorder.none,
             suffixIcon: null),
         inputFormatters: widget.isAge
-            ? [FilteringTextInputFormatter.digitsOnly] // Только цифры, если isAge = true
+            ? [
+                FilteringTextInputFormatter.digitsOnly
+              ] // Только цифры, если isAge = true
             : [],
+      ),
+    );
+  }
+}
+
+class CommentsInputWidget extends StatelessWidget {
+  const CommentsInputWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 350,
+      height: 150,
+      padding: EdgeInsets.only(left: 10),
+      decoration: BoxDecoration(
+        color: AppColors.color50,
+        boxShadow: [
+          BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 4,
+              offset: Offset(0, 4))
+        ],
+        border: Border.all(
+            //Todo поменять на ошибку
+            color:
+                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            width: false ? 2 : 1),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: TextField(
+        maxLines: null,
+        controller: commentsController,
+        // onTap: () {},
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        decoration: InputDecoration(
+            hintText: "",
+            label: Text(
+              "Комментарий",
+              style: TextStyle(color: AppColors.color900),
+            ),
+            border: InputBorder.none,
+            suffixIcon: null),
+      ),
+    );
+  }
+}
+
+class SendResumeButton extends StatefulWidget {
+  const SendResumeButton({
+    super.key,
+  });
+
+  @override
+  State<SendResumeButton> createState() => _SendResumeButtonState();
+}
+
+class _SendResumeButtonState extends State<SendResumeButton> {
+  @override
+  Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+
+    return StreamBuilder<StateRequest>(
+        stream: bloc.observeStateCreateButton(),
+        builder: (context, snapshot) {
+          print('SendResumeButtonState is start ${snapshot.data}');
+          if (snapshot.data == StateRequest.loading) {
+            return ButtonWidget(
+                onTap: () {
+                  print('Было нажато но не обработано');
+                },
+                color: AppColors.color100);
+          }
+
+          if (snapshot.data == StateRequest.good) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ageController.clear();
+              sourceController.clear();
+              vacancyController.clear();
+              nameController.clear();
+              commentsController.clear();
+            });
+          }
+          return ButtonWidget(
+            onTap: () {
+              if (ageController.text != "") {
+                bloc.resumeVacancyControllerSubject.add(vacancyController.text);
+                bloc.resumeNameControllerSubject.add(nameController.text);
+                bloc.resumeAgeControllerSubject.add(ageController.text);
+                bloc.resumeSourceControllerSubject.add(sourceController.text);
+                bloc.resumeCommentsControllerSubject.add(commentsController.text);
+                bloc.sendResumeToCreate();
+              }
+            },
+            color: AppColors.color900,
+          );
+        });
+  }
+}
+
+class ButtonWidget extends StatelessWidget {
+  final VoidCallback onTap;
+  final Color color;
+
+  const ButtonWidget({
+    super.key,
+    required this.onTap,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        width: 350,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Text("Добавить",
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w400)),
       ),
     );
   }

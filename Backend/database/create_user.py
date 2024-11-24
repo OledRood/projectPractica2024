@@ -25,17 +25,16 @@ def close_base(cursor, connection):
     connection.close()
 
 
-def create_hr(user_id, user_hr_id, cursor, connection):
-    cursor.execute("SELECT hr_lead_id FROM hr_lead WHERE user_id= %s", (user_hr_id,))
-    hr_lead_id = cursor.fetchone()[0]
+def create_hr(user_id, hr_lead_id, cursor, connection):
+
     
-    insert_query = "INSERT INTO Hr (user_id, hr_lead_id) VALUES (%s, %s)"
+    insert_query = "INSERT INTO Hr ( hr_id, hr_lead_id) VALUES (%s, %s)"
     cursor.execute(insert_query, (user_id, hr_lead_id))
     connection.commit()
 
 
 def create_hr_lead(user_id, cursor, connection):
-    insert_query = "INSERT INTO hr_lead (user_id) VALUES ( %s)"
+    insert_query = "INSERT INTO hr_lead (hr_lead_id) VALUES ( %s)"
     cursor.execute(insert_query, (user_id,))
     connection.commit()    
 
@@ -54,7 +53,7 @@ def create_user(username, role, password, connection, cursor):
     except:
         return "Something wrong with create base"
 
-def isAdmin(id, connection, cursor):
+def isAdmin(id, cursor):
     cursor.execute("SELECT role FROM User WHERE user_id = %s", (id,))
     role = cursor.fetchone();
     print(role[0])
@@ -66,11 +65,11 @@ def isAdmin(id, connection, cursor):
 
 
 
-def create_new_user(username, role, password, user_hr_id, id):
+def create_new_user(username, role, password, hr_lead_id, id):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-
-    if(not (isAdmin(connection=connection, cursor=cursor, id=id))):
+    
+    if(not (isAdmin(cursor=cursor, id=id))):
         return "You don't have rights"
 
     #Создаем пользователя в базе user
@@ -86,7 +85,7 @@ def create_new_user(username, role, password, user_hr_id, id):
     
     # try:
     if(role == "Hr"):
-        create_hr(user_id=user_id, user_hr_id=user_hr_id, cursor=cursor, connection=connection);
+        create_hr(user_id=user_id, hr_lead_id=hr_lead_id, cursor=cursor, connection=connection);
         print('Hr is created')
     elif(role == "Hr_lead"):
         create_hr_lead(user_id=user_id, cursor=cursor, connection=connection)
@@ -96,6 +95,7 @@ def create_new_user(username, role, password, user_hr_id, id):
     #     return "Error with create user in " + role + ' table'  
     close_base(cursor, connection);
     return "Data is recorded"
+
 
 
 

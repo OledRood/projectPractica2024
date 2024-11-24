@@ -32,12 +32,8 @@ def login(name, password):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     hash_password = hash(password)
-
-    print("Логин и пароль")
-    print(name)
-    print(password)
-    print(hash_password)
-
+# sqlAlchimya
+# connectionKit
     cursor.execute("SELECT user_id FROM User WHERE username = %s and password = %s", (name, hash_password))
     id = cursor.fetchone()
     cursor.execute("SELECT role FROM User WHERE username = %s and password = %s", (name, hash_password))
@@ -49,7 +45,6 @@ def login(name, password):
         return {"result" : False, "id" : "", "role": ""}
     resultId = id[0]
     resultRole = role[0]
-    print(resultRole)
     return {"result" : True, "id" : resultId, "role": resultRole}
 
   

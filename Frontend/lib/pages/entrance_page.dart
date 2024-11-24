@@ -1,76 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../bloc/entrance_bloc.dart';
 import 'package:provider/provider.dart';
 
+import '../bloc/bloc.dart';
 import '../resources/app_colors.dart';
-import 'hr_main_page.dart';
 
 var usernameError = false;
 var passwordError = false;
 var serverRequest = false;
 String text = 'Вход';
-//Это стоит переделать, потому что выглядит очень плохо
 var _passwordController = TextEditingController();
 var _usernameController = TextEditingController();
-var navigator = false;
+//
+// class StreamBuilderPageControl extends StatefulWidget {
+//   const StreamBuilderPageControl({super.key});
+//
+//   @override
+//   State<StreamBuilderPageControl> createState() => _StreamBuilderPageControlState();
+// }
+//
+// class _StreamBuilderPageControlState extends State<StreamBuilderPageControl> {
+//   @override
+//   Widget build(BuildContext context) {
+//     return StreamBuilder(stream: , builder: builder);
+//   }
+// }
+
+
+
+
 
 class EntrancePage extends StatefulWidget {
-  const EntrancePage({super.key});
+  const EntrancePage({
+    super.key,
+  });
 
   @override
   State<EntrancePage> createState() => _EntrancePageState();
 }
 
 class _EntrancePageState extends State<EntrancePage> {
-  late EntranceBloc bloc;
-
-  @override
-  void initState() {
-    super.initState();
-    bloc = EntranceBloc();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Provider.value(value: bloc, child: PageContent());
-  }
-}
-
-class PageContent extends StatefulWidget {
-  const PageContent({
-    super.key,
-  });
-
-  @override
-  State<PageContent> createState() => _PageContentState();
-}
-
-class _PageContentState extends State<PageContent> {
-  @override
-  Widget build(BuildContext context) {
-    final EntranceBloc bloc = Provider.of<EntranceBloc>(context, listen: false);
-    // bloc.getId();
-
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     return Scaffold(
-      backgroundColor: AppColors.color50,
-      body: StreamBuilder(
-          stream: bloc.observeRequest(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData || snapshot.data == null) {
-              return Center(child: Text('Программа сломалась :('));
-            }
-            if (snapshot.data == StateContentRequest.nextPage && navigator) {
-              Future.microtask(() {
-                _passwordController.clear();
-                Navigator.pushNamed(context, "/MainPage");
-              });
-            }
-            return WindowWidget();
-          }),
-    );
+        backgroundColor: AppColors.color50,
+        body: StreamBuilder<StateRequest>(
+            stream: bloc.observeStateLogInSubject(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data == null) {
+                return Center(child: Text('Программа сломалась :('));
+              }
+              if (snapshot.data == StateRequest.good) {
+                Future.microtask(() {
+                  _passwordController.clear();
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    "/MainPage",
+                    (Route<dynamic> route) => false,
+                  );
+                  // bloc.stateLogInSubject.add(StateContentRequest.none);
+                });
+              }
+              return WindowWidget();
+            }));
   }
 }
+
+
 
 class WindowWidget extends StatelessWidget {
   const WindowWidget({
@@ -103,7 +99,7 @@ class WindowWidget extends StatelessWidget {
             const SizedBox(
               height: 10,
             ),
-            LogInWidget(),
+            FocusTraversalGroup(child: LogInWidget()),
           ],
         ),
       ),
@@ -123,7 +119,7 @@ class RequestStatusWidget extends StatefulWidget {
 class _RequestStatusWidgetState extends State<RequestStatusWidget> {
   @override
   Widget build(BuildContext context) {
-    final EntranceBloc bloc = Provider.of<EntranceBloc>(context, listen: false);
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     bool isTextDeffault = (text == 'Вход');
 
     return Row(
@@ -138,10 +134,10 @@ class _RequestStatusWidgetState extends State<RequestStatusWidget> {
               fontWeight: FontWeight.w900),
         ),
         StreamBuilder(
-            stream: bloc.observeRequest(),
+            stream: bloc.observeStateLogInPageContent(),
             builder: (context, snapshot) {
               switch (snapshot.data) {
-                case StateContentRequest.loading:
+                case StateRequest.loading:
                   return Row(
                     children: [
                       text == "Вход" ? SizedBox(width: 220) : SizedBox.shrink(),
@@ -151,7 +147,7 @@ class _RequestStatusWidgetState extends State<RequestStatusWidget> {
                       ),
                     ],
                   );
-                case StateContentRequest.serverError:
+                case StateRequest.serverError:
                   return Row(
                     children: [
                       isTextDeffault
@@ -174,7 +170,7 @@ class _RequestStatusWidgetState extends State<RequestStatusWidget> {
                       )
                     ],
                   );
-                case StateContentRequest.errorConnection:
+                case StateRequest.errorConnection:
                   return Row(
                     children: [
                       isTextDeffault
@@ -203,20 +199,6 @@ class _RequestStatusWidgetState extends State<RequestStatusWidget> {
                 default:
                   return SizedBox.shrink();
               }
-              return Row(
-                children: [
-                  SizedBox(
-                    width: 15,
-                  ),
-                  Text(
-                    'Вход',
-                    style: TextStyle(
-                        color: AppColors.color900,
-                        fontSize: 40,
-                        fontWeight: FontWeight.w900),
-                  ),
-                ],
-              );
             }),
       ],
     );
@@ -259,38 +241,101 @@ class _IconStatusWidgetState extends State<IconStatusWidget> {
   }
 }
 
-class LogInWidget extends StatelessWidget {
+class LogInWidget extends StatefulWidget {
   const LogInWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final EntranceBloc bloc = Provider.of<EntranceBloc>(context, listen: false);
-    return GestureDetector(
-      onTapDown: (TapDownDetails _) {
-        // print("TAP");
-        bloc.usernameControllerSubject.add(_usernameController.text);
-        bloc.passwordControllerSubject.add(_passwordController.text);
-        navigator = true;
-        bloc.combineUserPassword("DOWN");
-      },
-      onTapUp: (TapUpDetails _) {
-        // print("UNTAP");
+  State<LogInWidget> createState() => _LogInWidgetState();
+}
 
-        bloc.combineUserPassword("UP");
-      },
-      child: Container(
-        alignment: Alignment.center,
-        width: 350,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.color900,
-          borderRadius: BorderRadius.circular(9),
+class _LogInWidgetState extends State<LogInWidget> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+
+
+  @override
+  void initState() {
+    super.initState();
+    // Слушатель изменения фокуса
+    _focusNode.addListener(() {
+      setState(() {
+        _isFocused = _focusNode.hasFocus;
+      });
+    });
+  }
+
+
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+
+  Color color = AppColors.color900;
+  int _enterCounter = 0;
+  int _exitCounter = 0;
+  double x = 0.0;
+  double y = 0.0;
+
+
+  void _incrementExit(PointerEvent details) {
+    setState(() {
+      color = AppColors.color900;
+      // _exitCounter++;
+    });
+  }
+
+  void _updateLocation(PointerEvent details) {
+    setState(() {
+      color = AppColors.color800;
+      x = details.position.dx;
+      y = details.position.dy;
+    });
+  }
+  @override
+  Widget build(BuildContext context) {
+    
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    return MouseRegion(
+      onHover: _updateLocation,
+      onExit: _incrementExit,
+      child: GestureDetector(
+        onTap: () {
+          // print("TAP");
+          bloc.usernameControllerSubject.add(_usernameController.text);
+          bloc.passwordControllerSubject.add(_passwordController.text);
+          bloc.sendPassWordAndLogin();
+        },
+        child: Focus(
+          focusNode: _focusNode,
+          onKey: (FocusNode node, RawKeyEvent event) {
+            if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+              bloc.usernameControllerSubject.add(_usernameController.text);
+              bloc.passwordControllerSubject.add(_passwordController.text);
+              bloc.sendPassWordAndLogin();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+      
+          child: Container(
+            alignment: Alignment.center,
+            width: 350,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _isFocused ? AppColors.color800 : color,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Text("Войти",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400)),
+          ),
         ),
-        child: Text("Войти",
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w400)),
       ),
     );
   }
@@ -311,7 +356,7 @@ class UserInputWidget extends StatefulWidget {
 class _UserInputWidgetState extends State<UserInputWidget> {
   @override
   Widget build(BuildContext context) {
-    final EntranceBloc bloc = Provider.of<EntranceBloc>(context, listen: false);
+    // final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     return Container(
       width: 350,
       height: 40,
@@ -371,7 +416,7 @@ class _PasswordWidgetState extends State<PasswordWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final EntranceBloc bloc = Provider.of<EntranceBloc>(context, listen: false);
+    // final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     return Container(
       width: 350,
       height: 40,
