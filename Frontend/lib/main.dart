@@ -2,17 +2,16 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hr_monitor/pages/create_resume_page.dart';
 import 'package:hr_monitor/pages/entrance_page.dart';
 import 'package:hr_monitor/pages/search_resume_page.dart';
 import 'package:hr_monitor/pages/main_page.dart';
 import 'package:hr_monitor/pages/resume_info_page.dart';
+import 'package:hr_monitor/pages/statistics_page.dart';
 import 'package:provider/provider.dart';
 
 import 'bloc/bloc.dart';
-import 'bloc/entrance_bloc.dart';
-import 'bloc/hr_main_bloc.dart';
-import 'bloc/main_bloc.dart';
 
 void main() {
   runApp(
@@ -57,12 +56,15 @@ class MyApp extends StatelessWidget {
         if (settings.name == '/MainPage/SearchResumePage') {
           return MaterialPageRoute(builder: (context) => ResumeSearchPage());
         }
+        if (settings.name == '/MainPage/StatisticsPage') {
+          return MaterialPageRoute(builder: (context) => StatisticsPage());
+        }
         return null; // Возвращает null, если маршрут не найден
       },
 
       title: 'Practica',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        fontFamily: GoogleFonts.kurale().fontFamily,
         useMaterial3: true,
       ),
       home: EntrancePage(),

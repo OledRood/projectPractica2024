@@ -3,13 +3,17 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:hr_monitor/pages/create_resume_page.dart';
+import 'package:hr_monitor/pages/resume_info_page.dart';
+import 'package:hr_monitor/types/resume_statistics.dart';
 import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/resume.dart';
+import '../models/statistics/statistics.dart';
 import '../resources/api_routes.dart';
 import '../resources/roles.dart';
+import '../types/full_resume.dart';
 
 class Bloc {
   final usernameControllerSubject = BehaviorSubject<String>.seeded('');
@@ -26,10 +30,12 @@ class Bloc {
   final resumeNameControllerSubject = BehaviorSubject<String>.seeded("");
   final resumeSourceControllerSubject = BehaviorSubject<String>.seeded('');
   final resumeIdControllerSubject = BehaviorSubject<int>.seeded(-1);
+  final resumeArchivControllerSubject = BehaviorSubject<int>.seeded(-1);
+  final resumeHrNameControllerSubject = BehaviorSubject<String>.seeded("");
+  final resumeFromDateTimeSubject = BehaviorSubject<DateTime?>.seeded(null);
+  final resumeToDateTimeSubject = BehaviorSubject<DateTime?>.seeded(null);
 
   Stream<int> observeResumeIdSubject() => resumeIdControllerSubject;
-
-  final resumeArchivControllerSubject = BehaviorSubject<int>.seeded(-1);
 
   Bloc() {
     tryFastEntrance();
@@ -70,6 +76,7 @@ class Bloc {
             userIdSubject.add(searchResult[0]['id']);
 
             roleSubject.add(Roles.getRole(searchResult[0]['role'])!);
+            getHrList();
             saveUserData();
             stateLogInSubject.add(StateRequest.good);
             stateLogInPageContentSubject.add(StateRequest.good);
@@ -103,8 +110,7 @@ class Bloc {
     print('requestEntrance: $username, $password');
     try {
       var headers = Routes.headers;
-      var request =
-          http.Request('POST', Uri.parse(Routes.loginRequest));
+      var request = http.Request('POST', Uri.parse(Routes.loginRequest));
       request.body =
           json.encode({"username": "$username", "password": "$password"});
       request.headers.addAll(headers);
@@ -198,10 +204,8 @@ class Bloc {
     final userId = userIdSubject.value;
     final body = json.encode({"user_id": userId});
     final headers = Routes.headers;
-    var response = await http.post(
-        Uri.parse(Routes.getResumeToMainPage),
-        headers: headers,
-        body: body);
+    var response = await http.post(Uri.parse(Routes.getResumeToMainPage),
+        headers: headers, body: body);
     if (response.statusCode == 200) {
       final List<dynamic> result = json.decode(response.body);
 
@@ -252,7 +256,8 @@ class Bloc {
             resumeId: resumeData.resumeId,
             comments: resumeData.comments,
             archiv: resumeData.archiv,
-            status: resumeData.status)
+            status: resumeData.status,
+            hrName: resumeData.hrName)
         .asStream()
         .listen((createAnswer) {
       print('createAnswer: $createAnswer');
@@ -277,11 +282,10 @@ class Bloc {
     required String comments,
     required int archiv,
     required String status,
+    required String hrName,
   }) async {
-    print('requestToUpdateResume start');
-    var headers = {'Content-Type': 'application/json'};
-    var request =
-        http.Request('POST', Uri.parse('http://127.0.0.1:5000/resume/update'));
+    var headers = Routes.headers;
+    var request = http.Request('POST', Uri.parse(Routes.updateResume));
     request.body = json.encode({
       "vacancy": vacancy,
       "age": age,
@@ -291,6 +295,7 @@ class Bloc {
       'comments': comments,
       "archiv": archiv,
       "status": status,
+      'hr_name': hrName
     });
     request.headers.addAll(headers);
 
@@ -319,13 +324,14 @@ class Bloc {
     final int archiv = resumeArchivControllerSubject.value;
     final String status = resumeStatusControllerSubject.value;
     final int resumeId = resumeIdControllerSubject.value;
+    final String hrName = resumeHrNameControllerSubject.value ?? "Любой";
+    final int intAge = (age == "") ? -1 : int.parse(age);
 
-    final int intAge = (age == "") ?  -1 : int.parse(age);
 
     return FullResumeInfo(
         archiv: archiv,
         date_last_changes: null,
-        hrName: null,
+        hrName: hrName,
         resumeId: resumeId,
         status: status,
         vacancy: vacancy,
@@ -353,9 +359,12 @@ class Bloc {
     final age = (resume.age == -1) ? "" : resume.age.toString();
     final String status = (resume.status == 'Любой') ? "" : resume.status;
     final userId = userIdSubject.value;
-    print("age: ${resume.age}");
+    final String hrName = (resume.hrName == "Любой") ? '' : resume.hrName;
     final searchText = searchTextControllerSubject.value;
+    final fromDateText = resumeFromDateTimeSubject.value == null ?  "": resumeFromDateTimeSubject.value.toString();
+    final toDateText = resumeToDateTimeSubject.value == null ?  "": resumeToDateTimeSubject.value.toString();
     searchWithFiltersSubscription?.cancel();
+
     searchWithFiltersSubscription = requestToSearchWithFilters(
       vacancy: resume.vacancy ?? "",
       age: age,
@@ -365,6 +374,9 @@ class Bloc {
       status: status,
       searchText: searchText ?? "",
       userId: userId,
+      hrName: hrName,
+      fromDateText: fromDateText,
+      toDateText: toDateText,
     ).asStream().listen((resultValue) {
       if (resultValue[1] == 200) {
         if (resultValue[0] == []) {
@@ -377,7 +389,6 @@ class Bloc {
       } else {
         print('state.result');
         stateSearchListWidget.add(StateRequest.error);
-
       }
     }
         // stateUpgrateResumeRequestSubject.add(StateRequest.error);
@@ -394,6 +405,9 @@ class Bloc {
     required String status,
     required String searchText,
     required int userId,
+    required String hrName,
+    required fromDateText,
+    required toDateText
   }) async {
     final body = json.encode({
       "search_text": searchText,
@@ -404,6 +418,9 @@ class Bloc {
       "archiv": archiv,
       "status": status,
       'user_id': userId,
+      'hr_name': hrName,
+      "from_date" : fromDateText,
+      'to_date': toDateText,
     });
     final headers = {'Content-Type': 'application/json'};
     var response = await http.post(Uri.parse(Routes.searchResume),
@@ -445,8 +462,6 @@ class Bloc {
     }
   }
 
-
-
 //TODO CreatePage
 //------------------------------------------------------------------------------------------
 
@@ -458,16 +473,16 @@ class Bloc {
 
   Future sendResumeToCreate() async {
     final resumeData = getResumeInfoFromSubject();
-
-    if (resumeData.resumeId != '' && resumeData.age != '') {
+    final user_id = userIdSubject.value;
+    if (user_id != -1 && resumeData.age != -1) {
       stateCreateButtonSubject.add(StateRequest.loading);
       resumeToCreateSubscription?.cancel();
       resumeToCreateSubscription = requestToCreateResume(
               vacancy: resumeData.vacancy,
-              age: int.parse(resumeData.age),
+              age: resumeData.age,
               source: resumeData.source,
               name: resumeData.fullName,
-              id: int.parse(resumeData.resumeId),
+              id: user_id,
               comments: resumeData.comments)
           .asStream()
           .listen((searchResult) {
@@ -494,7 +509,7 @@ class Bloc {
     var request = http.Request('POST', Uri.parse(Routes.createResume));
     request.body = json.encode({
       "vacancy": vacancy,
-      "age": age,
+      "age": "$age",
       "name": name,
       "source": source,
       "id": id,
@@ -511,9 +526,103 @@ class Bloc {
     }
   }
 
+  final hrListSubject = BehaviorSubject<List<String>>();
+
+  Stream<List<String>> observeHrList() => hrListSubject;
+  StreamSubscription? getHrListSubscription;
+
+  void getHrList() {
+    Role role = roleSubject.value;
+    if (role == Role.hr_lead) {
+      final int userId = userIdSubject.value;
+      getHrListSubscription?.cancel();
+      getHrListSubscription =
+          requestGetHrList(userId).asStream().listen((hrList) {
+        //Ковертируем jsArray в list<string>
+        List<String> result =
+            List<String>.from(hrList.map((item) => item.toString()));
+        print('result: ${result}');
+        hrListSubject.add(result);
+      });
+    } else {
+      hrListSubject.add([]);
+    }
+  }
+
+  Future requestGetHrList(int userId) async {
+    var headers = Routes.headers;
+    var request = http.Request('POST', Uri.parse(Routes.getHrList));
+    request.body = json.encode({"user_id": userId});
+    request.headers.addAll(headers);
+
+    http.StreamedResponse response = await request.send();
+    String responseData = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      var jsonData = jsonDecode(responseData);
+      return jsonData['hr_list'];
+    } else {
+      return [];
+    }
+  }
+
   void cancelCreateSubscription() {
     stateCreateButtonSubject.add(StateRequest.none);
     resumeToCreateSubscription?.cancel();
+  }
+
+//TODO StatisticPage-------------------------------------------------------------------------------
+  final stateStatisticRequest =
+      BehaviorSubject<StateRequest>.seeded(StateRequest.none);
+  final statisticsSubject = BehaviorSubject<List<ResumeStatistic>>();
+
+  Stream<StateRequest> observeStateStatisticsRequest() => stateStatisticRequest;
+
+  Stream<List<ResumeStatistic>> observeStatistics() => statisticsSubject;
+  StreamSubscription? statisticSubscription;
+
+  void getStatistic() {
+    statisticSubscription?.cancel();
+    statisticSubscription = statisticsRequest().asStream().listen(
+      (value) {
+        if (value.isEmpty) {
+          print('statistics.isEmpty');
+          statisticsSubject.add([]);
+          stateStatisticRequest.add(StateRequest.error);
+        }
+        statisticsSubject.add(value);
+        stateStatisticRequest.add(StateRequest.good);
+      },
+      //     onError: (error, stackTrace) {
+      //   stateStatisticRequest.add(StateRequest.error);
+      //   print('OnError getStatistics: $error');
+      // }
+    );
+  }
+
+  Future statisticsRequest() async {
+    final userId = userIdSubject.value;
+    final body = json.encode({"user_id": userId});
+    final headers = Routes.headers;
+    var response = await http.post(Uri.parse(Routes.getStatistic),
+        headers: headers, body: body);
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> result = json.decode(response.body);
+
+      final List<Statistics> resumeStat = result.values.map((rawResume) {
+        return Statistics.fromJson(rawResume);
+      }).toList();
+      final List<ResumeStatistic> found = resumeStat.map((statistics) {
+        return ResumeStatistic(
+            vacancy: statistics.vacancy,
+            source: statistics.source,
+            averageTime: statistics.averageTime,
+            status: statistics.status,
+            name: statistics.name);
+      }).toList();
+      return found;
+    }
+    throw Exception('something error in search');
   }
 
   void exit() {
@@ -527,6 +636,7 @@ class Bloc {
     cleanResumeControllers();
     deleteUserData();
   }
+
   void cleanResumeControllers() {
     resumeVacancyControllerSubject.add('');
     resumeAgeControllerSubject.add("");
@@ -535,6 +645,7 @@ class Bloc {
     resumeCommentsControllerSubject.add('');
     resumeArchivControllerSubject.add(-1);
     resumeStatusControllerSubject.add("");
+    resumeHrNameControllerSubject.add('');
   }
 
   Future<void> deleteUserData() async {
@@ -570,69 +681,11 @@ class Bloc {
     searchWithFiltersSubscription?.cancel();
     stateCreateButtonSubject.close();
     resumeToCreateSubscription?.cancel();
+    getHrListSubscription?.cancel();
+    statisticSubscription?.cancel();
+    stateStatisticRequest.close();
+    statisticsSubject.close();
   }
-}
-
-class FullResumeInfo {
-  final archiv;
-  final date_last_changes;
-  final hrName;
-  final resumeId;
-  final status;
-  final vacancy;
-  final age;
-  final fullName;
-  final source;
-  final comments;
-
-  FullResumeInfo({
-    required this.archiv,
-    required this.date_last_changes,
-    required this.hrName,
-    required this.resumeId,
-    required this.status,
-    required this.vacancy,
-    required this.fullName,
-    required this.age,
-    required this.source,
-    required this.comments,
-  });
-
-  @override
-  String toString() {
-    return 'FullResumeInfo{archiv: $archiv, date_last_changes: $date_last_changes, hr_id: $hrName, resume_id: $resumeId, status: $status}, vacancy: $vacancy, age: $age, source: $source, full_name: $fullName, comment: $comments)}';
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      super == other &&
-          other is FullResumeInfo &&
-          runtimeType == other.runtimeType &&
-          fullName == other.fullName &&
-          archiv == other.archiv &&
-          vacancy == other.vacancy &&
-          age == other.age &&
-          source == other.source &&
-          date_last_changes == other.date_last_changes &&
-          hrName == other.hrName &&
-          comments == other.comments &&
-          resumeId == other.resumeId &&
-          status == other.status;
-
-  @override
-  int get hashCode =>
-      super.hashCode ^
-      archiv.hashCode ^
-      date_last_changes.hashCode ^
-      hrName.hashCode ^
-      resumeId.hashCode ^
-      vacancy.hashCode ^
-      fullName.hashCode ^
-      age.hashCode ^
-      source.hashCode ^
-      comments.hashCode ^
-      status.hashCode;
 }
 
 enum StateRequest {
@@ -643,7 +696,7 @@ enum StateRequest {
   bad,
   good,
   error,
-  nothingFound
+  nothingFound,
 }
 
 enum Role { hr, hr_lead, admin }

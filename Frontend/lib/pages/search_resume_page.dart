@@ -1,9 +1,12 @@
+import 'package:date_field/date_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../bloc/bloc.dart';
 import '../resources/app_colors.dart';
 import '../resources/status.dart';
+import '../types/full_resume.dart';
 
 bool open = true;
 // String nameController ='';
@@ -17,10 +20,13 @@ final searchTextController = TextEditingController();
 String archivController = "";
 final vacancyController = TextEditingController();
 String statusController = "Любой";
+String hrController = 'Любой';
 final sourceController = TextEditingController();
 final ageController = TextEditingController();
+DateTime? fromDataTimeController;
+DateTime? toDataTimeController;
 
-class ResumeSearchPage extends StatefulWidget {
+final class ResumeSearchPage extends StatefulWidget {
   const ResumeSearchPage({super.key});
 
   @override
@@ -33,7 +39,9 @@ class _ResumeSearchPageState extends State<ResumeSearchPage> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
-    bloc.cleanResumeControllers();
+    clear(bloc);
+    bloc.getHrList();
+    searchTextController.text = "";
     return Scaffold(
         backgroundColor: AppColors.color100,
         body: Stack(
@@ -96,6 +104,16 @@ class _ResumeSearchPageState extends State<ResumeSearchPage> {
             ),
           ],
         ));
+  }
+
+  void clear(Bloc bloc) {
+    bloc.cleanResumeControllers();
+    //Используем для очистки при перезаходе на страницу иначе срабатывает даже без нажатий
+    statusController = "Любой";
+    hrController = 'Любой';
+    archivController = "";
+    fromDataTimeController = null;
+    toDataTimeController = null;
   }
 }
 
@@ -225,7 +243,8 @@ class ResumeWidget extends StatelessWidget {
                       textFontSize: textFontSize),
                   const SeparateWidget(),
                   TextWidget(
-                      text: 'Состояние: ${(content.archiv == 1) ? 'В архиве' : 'Активно'}',
+                      text:
+                          'Состояние: ${(content.archiv == 1) ? 'В архиве' : 'Активно'}',
                       textFontSize: textFontSize),
                   StreamBuilder<Role>(
                       stream: bloc.observeRoleSubject(),
@@ -239,8 +258,7 @@ class ResumeWidget extends StatelessWidget {
                                   textFontSize: textFontSize),
                             ],
                           );
-                        }
-                        else{
+                        } else {
                           return SizedBox.shrink();
                         }
                       })
@@ -299,42 +317,19 @@ class ContentAppBar extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
-        GestureDetector(
-          onTap: () {
-            bloc.searchWithFiltersSubscription?.cancel();
-            bloc.resumeToSearchResultSubject.add([]);
-            Navigator.pop(context);
-          },
-          child: Container(
-            height: heigthAppBar,
-            width: 60,
-            decoration: BoxDecoration(
-                color: AppColors.color50.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(25)),
-            child: Icon(
-              Icons.logout,
-              color: AppColors.color900,
-            ),
-          ),
-        ),
+        IconButtonWidget(
+            icon: Icons.logout,
+            onPress: () {
+              bloc.searchWithFiltersSubscription?.cancel();
+              bloc.resumeToSearchResultSubject.add([]);
+              Navigator.pop(context);
+            }),
         const SizedBox(width: 10),
-        GestureDetector(
-          onTap: onTapFilteresButton,
-          child: Container(
-            height: heigthAppBar,
-            width: 60,
-            decoration: BoxDecoration(
-                color: AppColors.color50.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(25)),
-            child: Icon(
-              open
-                  ? Icons.circle_outlined
-                  : Icons.arrow_drop_down_circle_outlined,
-              color: AppColors.color900,
-              size: 25,
-            ),
-          ),
-        ),
+        IconButtonWidget(
+            icon: open
+                ? Icons.circle_outlined
+                : Icons.arrow_drop_down_circle_outlined,
+            onPress: onTapFilteresButton),
         const SizedBox(width: 10),
         Expanded(
           child: SearchWidget(
@@ -342,12 +337,11 @@ class ContentAppBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        SearchButton(
-          heigthAppBar: heigthAppBar,
-          onTap: () {
-            request(bloc);
-          },
-        ),
+        IconButtonWidget(
+            icon: Icons.search,
+            onPress: () {
+              request(bloc);
+            }),
       ],
     );
   }
@@ -356,34 +350,50 @@ class ContentAppBar extends StatelessWidget {
     bloc.resumeStatusControllerSubject.add(statusController);
     bloc.addArchivContollerWhenSearch(archivController);
     bloc.searchTextControllerSubject.add(searchTextController.text);
+    bloc.resumeHrNameControllerSubject.add(hrController);
+    bloc.resumeFromDateTimeSubject.add(fromDataTimeController);
+    bloc.resumeToDateTimeSubject.add(toDataTimeController);
+    print('request');
     bloc.sendResumeToSearchWithFilters();
   }
 }
 
-class SearchButton extends StatelessWidget {
-  final VoidCallback onTap;
-  final double heigthAppBar;
+class IconButtonWidget extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPress;
 
-  const SearchButton({
+  const IconButtonWidget({
     super.key,
-    required this.heigthAppBar,
-    required this.onTap,
+    required this.icon,
+    required this.onPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: heigthAppBar,
-        width: 60,
-        decoration: BoxDecoration(
-            color: AppColors.color50.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(25)),
-        child: Icon(
-          color: AppColors.color900,
-          Icons.search,
-          size: 25,
+    return IconButton(
+      onPressed: onPress,
+      icon: Icon(icon),
+      constraints: BoxConstraints(
+        minWidth: 60.0,
+        minHeight: 60.0,
+      ),
+      focusNode: FocusNode(skipTraversal: true),
+      color: AppColors.color900,
+      style: ButtonStyle(
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+        ),
+        shadowColor: WidgetStatePropertyAll(Colors.black),
+        elevation: WidgetStatePropertyAll(2),
+        backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+          (states) {
+            if (states.contains(WidgetState.hovered)) {
+              return AppColors.color50;
+            }
+            return AppColors.color50.withOpacity(0.9);
+          },
         ),
       ),
     );
@@ -405,6 +415,7 @@ class _FiltersWidgetState extends State<FiltersWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: true);
     if (widget.open) {
       return Column(
         children: [
@@ -415,67 +426,96 @@ class _FiltersWidgetState extends State<FiltersWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
-                color: AppColors.color50.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(30)),
+              color: AppColors.color50.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1), // Тень
+                  offset: Offset(0, 0),
+                  blurRadius: 4,
+                  spreadRadius: 2, // Радиус распространения тени
+                ),
+              ],
+            ),
             height: 150,
             margin: const EdgeInsets.only(left: 70, right: 70),
             child: Stack(
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    SizedBox(height: 5),
+                    Row(
                       children: [
-                        SizedBox(height: 5),
-                        Row(
-                          children: [
-                            ItemWidget(
-                                text: "Имя",
-                                width: 200,
-                                controller: nameController),
-                            SizedBox(width: 20),
-                            ItemWidget(
-                                text: 'Источник',
-                                width: 100,
-                                controller: sourceController),
-                            SizedBox(width: 20),
-                            DropdownExample(
-                              text: 'Статус',
-                              width: 200,
-                              listOfValue: ["Любое"] + Status.getAllStatuses(),
-                              isArchiv: false,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Row(children: [
-                          ItemWidget(
-                              text: 'Вакансия',
-                              width: 200,
-                              controller: vacancyController),
-                          SizedBox(width: 20),
-                          ItemWidget(
-                              text: 'Возраст',
-                              width: 70,
-                              controller: ageController),
-                          SizedBox(width: 20),
-                          DropdownExample(
-                            text: 'Состояние',
+                        ItemWidget(
+                            text: "Имя",
+                            width: 200,
+                            controller: nameController),
+                        SizedBox(width: 20),
+                        ItemWidget(
+                            text: 'Источник',
                             width: 100,
-                            listOfValue: [
-                              'Не важно',
-                              'Активно',
-                              'В архиве',
-                            ],
-                            isArchiv: true,
-                          ),
-                        ]),
-                        SizedBox(height: 5)
+                            controller: sourceController),
+                        SizedBox(width: 20),
+                        DropdownExample(
+                          text: 'Статус',
+                          width: 200,
+                          listOfValue: ["Любой"] + Status.getAllStatuses(),
+                          isArchiv: false,
+                        ),
+                        SizedBox(width: 20),
+                        StreamBuilder<List<String>>(
+                            stream: bloc.observeHrList(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData ||
+                                  snapshot.data == null ||
+                                  snapshot.data!.isEmpty) {
+                                return SizedBox.shrink();
+                              }
+                              return DropdownExample(
+                                text: 'Hr',
+                                width: 200,
+                                listOfValue: ['Любой'] + snapshot.data!,
+                                isArchiv: false,
+                              );
+                            })
                       ],
                     ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    Row(children: [
+                      ItemWidget(
+                          text: 'Вакансия',
+                          width: 200,
+                          controller: vacancyController),
+                      SizedBox(width: 20),
+                      ItemWidget(
+                          text: 'Возраст',
+                          width: 70,
+                          controller: ageController),
+                      const SizedBox(width: 20),
+                      DropdownExample(
+                        text: 'Состояние',
+                        width: 100,
+                        listOfValue: [
+                          'Не важно',
+                          'Активно',
+                          'В архиве',
+                        ],
+                        isArchiv: true,
+                      ),
+                      Expanded(child: SizedBox()),
+                      Text("Дата:",
+                          style: TextStyle(
+                              fontSize: 16, color: AppColors.color900)),
+                      SizedBox(width: 10),
+                      TimeFilterWidget(label: 'От'),
+                      SizedBox(width: 20),
+                      TimeFilterWidget(label: 'До'),
+                    ]),
+                    const SizedBox(height: 5)
                   ],
                 ),
                 //Подпись об очистке фильтров
@@ -504,6 +544,44 @@ class _FiltersWidgetState extends State<FiltersWidget> {
   }
 }
 
+class TimeFilterWidget extends StatelessWidget {
+  final String label;
+
+  const TimeFilterWidget({super.key, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 65,
+      width: 230,
+      padding: EdgeInsets.only(right: 5, top: 2, left: 10),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(width: 0.5, color: AppColors.color600)),
+      child: DateTimeFormField(
+        padding: EdgeInsets.only(top: 2, right: 2),
+        decoration: InputDecoration(
+          labelText: label,
+          border: InputBorder.none,
+        ),
+
+        dateFormat: DateFormat('dd.MM.yyyy HH:mm'),
+        // Настройка формата
+        lastDate: DateTime.now(),
+
+        onChanged: (DateTime? value) {
+          if (label == 'От') {
+            fromDataTimeController = value;
+          } else {
+            toDataTimeController = value;
+          }
+        },
+      ),
+    );
+  }
+}
+
 class SearchWidget extends StatelessWidget {
   final double heightAppBar;
 
@@ -518,12 +596,17 @@ class SearchWidget extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.color50.withOpacity(0.9),
           borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1), // Тень
+              offset: Offset(0, 0),
+              blurRadius: 4,
+              spreadRadius: 2, // Радиус распространения тени
+            ),
+          ],
         ),
         child: TextField(
           autofocus: true,
-          // onSubmitted: (value) {
-          //   // bloc.updateText(value);
-          // },
           controller: searchTextController,
           style: TextStyle(
             color: AppColors.color900,
@@ -585,15 +668,15 @@ class _ItemWidgetState extends State<ItemWidget> {
                   onSubmitted: (value) {
                     setState(() {
                       check = true;
-                      addInBlocController(widget.text, bloc,
-                          widget.controller.text.toString());
+                      addInBlocController(
+                          widget.text, bloc, widget.controller.text.toString());
                       if (value == '') check = false;
                     });
                   },
                   onChanged: (value) {
                     if (check) {
-                      addInBlocController(widget.text, bloc,
-                          widget.controller.text.toString());
+                      addInBlocController(
+                          widget.text, bloc, widget.controller.text.toString());
                     }
                   },
 
@@ -722,9 +805,14 @@ class _DropdownExampleState extends State<DropdownExample> {
                   onChanged: (newValue) {
                     setState(() {
                       selectedValue = newValue;
-                      widget.isArchiv
-                          ? archivController = selectedValue!
-                          : statusController = selectedValue!;
+                      switch (widget.text) {
+                        case 'Hr':
+                          hrController = selectedValue!;
+                        case 'Статус':
+                          statusController = selectedValue!;
+                        case 'Состояние':
+                          archivController = selectedValue!;
+                      }
                     });
                   },
                 ),

@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../bloc/bloc.dart';
 import '../resources/app_colors.dart';
 import '../resources/status.dart';
+import '../types/full_resume.dart';
+import '../widgets/buttonRedWidget.dart';
 
 var vacancyController = TextEditingController();
 var ageController = TextEditingController();
@@ -16,10 +18,10 @@ String hrController = "";
 String statusController = '';
 int archivController = 0;
 
-
 class InfoResumePage extends StatefulWidget {
-
-  const InfoResumePage({super.key,});
+  const InfoResumePage({
+    super.key,
+  });
 
   @override
   State<InfoResumePage> createState() => _InfoResumePageState();
@@ -35,8 +37,9 @@ class _InfoResumePageState extends State<InfoResumePage> {
             stream: bloc.observeResumeIdSubject(),
             builder: (context, resumeId) {
               if (!resumeId.hasData || resumeId.data == -1) {
-                return Center(child: Text(
-                    'Причина поломки: Состояние id резюме = ${resumeId.data}'));
+                return Center(
+                    child: Text(
+                        'Причина поломки: Состояние id резюме = ${resumeId.data}'));
               }
               return StreamBuilder<List<FullResumeInfo>>(
                   stream: bloc.observeResultListResume(),
@@ -46,19 +49,18 @@ class _InfoResumePageState extends State<InfoResumePage> {
                           child: Text('Something Wrong ${snapshot.data}'));
                     }
                     final FullResumeInfo resume = snapshot.data!.firstWhere(
-                          (resume) => resume.resumeId == resumeId.data!,
-                      orElse: () =>
-                          FullResumeInfo(
-                              resumeId: null,
-                              fullName: '',
-                              archiv: null,
-                              date_last_changes: null,
-                              hrName: null,
-                              status: null,
-                              vacancy: null,
-                              age: null,
-                              source: null,
-                              comments: null), // Возвращаем объект по умолчанию
+                      (resume) => resume.resumeId == resumeId.data!,
+                      orElse: () => FullResumeInfo(
+                          resumeId: null,
+                          fullName: '',
+                          archiv: null,
+                          date_last_changes: null,
+                          hrName: null,
+                          status: null,
+                          vacancy: null,
+                          age: null,
+                          source: null,
+                          comments: null), // Возвращаем объект по умолчанию
                     );
                     // хи хи ха ха милый похож на тюленя хи хи ха ха а его любит милая
                     if (resume.resumeId == null) {
@@ -103,8 +105,7 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                               color: AppColors.color900);
                                         } else if (snapshot.data ==
                                             StateRequest.good) {
-                                          bloc
-                                              .resetStateUpgrateResumeRequestSubject();
+                                          bloc.resetStateUpgrateResumeRequestSubject();
                                           return Icon(Icons.check,
                                               color: AppColors.color900);
                                         } else {
@@ -151,12 +152,14 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                     const SizedBox(height: 20),
                                     ArchivWidget(),
                                     const SizedBox(height: 20),
-                                    // HrDropDownWidget(text: 'Hr',
-                                    //     width: 300,
-                                    //     listOfValue: listOfValue),
-                                    // ResumeTextInputWidget(text: "Hr",
-                                    //     width: 200,
-                                    //     controller: hrController),
+                                    StreamBuilder(
+                                        stream: bloc.observeRoleSubject(),
+                                        builder: (context, snapshot) {
+                                          if (snapshot.data == Role.hr_lead) {
+                                            return HrDropDownWidget();
+                                          }
+                                          return SizedBox.shrink();
+                                        }),
                                   ],
                                 ),
                                 SizedBox(
@@ -166,8 +169,8 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment
-                                          .start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           "Комментарий",
@@ -188,17 +191,17 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                             color: AppColors.color50,
                                             boxShadow: [
                                               BoxShadow(
-                                                  color:
-                                                  Color.fromRGBO(0, 0, 0, 0.05),
+                                                  color: Color.fromRGBO(
+                                                      0, 0, 0, 0.05),
                                                   blurRadius: 4,
                                                   offset: Offset(0, 4))
                                             ],
                                             border: Border.all(
-                                              //Todo поменять на ошибку
+                                                //Todo поменять на ошибку
                                                 color: AppColors.color900,
                                                 width: 1),
-                                            borderRadius: BorderRadius.circular(
-                                                9),
+                                            borderRadius:
+                                                BorderRadius.circular(9),
                                           ),
                                           child: TextField(
                                             maxLines: null,
@@ -240,12 +243,15 @@ class _InfoResumePageState extends State<InfoResumePage> {
                               ],
                             ),
 
+                            SizedBox(height: 20),
                             Row(
                               mainAxisSize: MainAxisSize.max,
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                ButtonWidget(
+                                RedButtonWidget(
                                   text: "Выход",
+                                  height: 50,
+                                  focus: false,
                                   onTap: () {
                                     //TODO сделать проверку на изменения
                                     if (true) {
@@ -253,18 +259,27 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                       Navigator.pop(context);
                                     }
                                   },
+                                  width: 100,
                                 ),
-                                SizedBox(width: 520),
-                                ButtonWidget(
+                                SizedBox(width: 445),
+                                RedButtonWidget(
                                   text: "Сохранить",
+                                  height: 50,
+                                  width: 100,
+                                  focus: false,
                                   onTap: () {
                                     print('сохранить');
                                     savedInSubject(bloc, resume);
                                   },
+
                                 ),
                                 SizedBox(width: 20),
-                                ButtonWidget(
+
+                                RedButtonWidget(
                                   text: "Отменить изменения",
+                                  height: 50,
+                                  width: 200,
+                                  focus: false,
                                   onTap: () {
                                     setDataInController(resume);
                                     setState(() {});
@@ -277,8 +292,7 @@ class _InfoResumePageState extends State<InfoResumePage> {
                       ],
                     );
                   });
-            }
-        ));
+            }));
   }
 
   void setDataInController(resume) {
@@ -289,6 +303,7 @@ class _InfoResumePageState extends State<InfoResumePage> {
     commentsController.text = resume.comments;
     statusController = resume.status.toString();
     archivController = resume.archiv;
+    hrController = resume.hrName;
 
     // firstStartPage = false;
   }
@@ -299,10 +314,12 @@ class _InfoResumePageState extends State<InfoResumePage> {
     bloc.resumeAgeControllerSubject.add(ageController.text.toString());
     bloc.resumeSourceControllerSubject.add(sourceController.text);
     bloc.resumeNameControllerSubject.add(nameController.text);
-    bloc.resumeCommentsControllerSubject.add(commentsController.text.toString());
+    bloc.resumeCommentsControllerSubject
+        .add(commentsController.text.toString());
     bloc.resumeStatusControllerSubject.add(statusController);
     bloc.resumeIdControllerSubject.add(resume.resumeId);
     bloc.resumeArchivControllerSubject.add(archivController);
+    bloc.resumeHrNameControllerSubject.add(hrController);
     bloc.sendResumeToUpdate();
     // mainBloc.getAllResumeToMainPage((archivController == 1));
 
@@ -324,9 +341,7 @@ class _ArchivWidgetState extends State<ArchivWidget> {
       children: [
         ResumeTextWidget(
           text: "Состояние",
-          resumeInfo: archivController == 0
-              ? "Активно"
-              : "В архиве",
+          resumeInfo: archivController == 0 ? "Активно" : "В архиве",
           width: 160,
         ),
         SizedBox(
@@ -336,8 +351,7 @@ class _ArchivWidgetState extends State<ArchivWidget> {
           onTap: () {
             print(archivController);
             setState(() {
-              archivController =
-              (archivController == 0) ? 1 : 0;
+              archivController = (archivController == 0) ? 1 : 0;
             });
           },
           child: Container(
@@ -346,73 +360,18 @@ class _ArchivWidgetState extends State<ArchivWidget> {
             width: 40,
             // padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: false
-                  ? AppColors.color800
-                  : AppColors.color900,
+              color: false ? AppColors.color800 : AppColors.color900,
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon((archivController == 0)
-                ? Icons.archive_outlined
-                : Icons.check_box_outlined, color: AppColors.color50,),
-
+            child: Icon(
+              (archivController == 0)
+                  ? Icons.archive_outlined
+                  : Icons.check_box_outlined,
+              color: AppColors.color50,
+            ),
           ),
         )
       ],
-    );
-  }
-}
-
-
-class ButtonWidget extends StatefulWidget {
-  final VoidCallback onTap;
-  final String text;
-
-  const ButtonWidget({
-    super.key,
-    required this.onTap,
-    required this.text,
-  });
-
-  @override
-  State<ButtonWidget> createState() => _ButtonWidgetState();
-}
-
-class _ButtonWidgetState extends State<ButtonWidget> {
-  bool tap = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: (_) {
-        setState(() {
-          tap = true;
-        });
-      },
-      onTapUp: (_) {
-        setState(() {
-          tap = false;
-        });
-      },
-      onTapCancel: () {
-        setState(() {
-          tap = false;
-        });
-      },
-      child: Container(
-        alignment: Alignment.center,
-        height: 50,
-        // width: 70,
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: tap ? AppColors.color800 : AppColors.color900,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Text(
-          widget.text,
-          style: TextStyle(color: AppColors.color50),
-        ),
-      ),
     );
   }
 }
@@ -468,8 +427,8 @@ class ResumeTextInputWidget extends StatelessWidget {
             ),
             inputFormatters: (text == 'Возраст')
                 ? [
-              FilteringTextInputFormatter.digitsOnly
-            ] // Только цифры, если isAge = true
+                    FilteringTextInputFormatter.digitsOnly
+                  ] // Только цифры, если isAge = true
                 : [],
           ),
         ),
@@ -477,7 +436,6 @@ class ResumeTextInputWidget extends StatelessWidget {
     );
   }
 }
-
 
 class ResumeTextWidget extends StatelessWidget {
   final String text;
@@ -522,7 +480,7 @@ class ResumeTextWidget extends StatelessWidget {
           child: Text(
             resumeInfo.toString(),
             style: TextStyle(
-              // color: Colors.black,
+                // color: Colors.black,
                 fontWeight: FontWeight.w500,
                 fontSize: 16),
           ),
@@ -668,75 +626,83 @@ class MoveStatus extends StatelessWidget {
 }
 
 class HrDropDownWidget extends StatefulWidget {
-  final String text;
-  final double width;
-  final List<String> listOfValue;
-
-  // final
-
-  const HrDropDownWidget({Key? key,
-    required this.text,
-    required this.width,
-    required this.listOfValue,
-  })
-      : super(key: key);
+  const HrDropDownWidget({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _HrDropDownWidgetState createState() => _HrDropDownWidgetState();
 }
 
 class _HrDropDownWidgetState extends State<HrDropDownWidget> {
-  String? selectedValue;
-
   // Список вариантов для выпадающего меню
 
   @override
   Widget build(BuildContext context) {
+    String selectedHr = hrController;
 
+    final Bloc bloc = Provider.of<Bloc>(context, listen: true);
+    List<String> valueList = bloc.hrListSubject.value;
+
+    // List<String> valueList = [
+    //   "hr",
+    //   "Иванов Иван Иванович",
+    //   "Клюшка Лариса Борисовна"
+    // ];
     return Row(
       children: [
         Text(
-          "${widget.text}:",
+          "Hr:",
           style: TextStyle(fontSize: 16, color: AppColors.color900),
         ),
         SizedBox(width: 16),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(width: 0.5, color: AppColors.color600),
+            color: AppColors.color50,
+            boxShadow: [
+              BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, 0.05),
+                  blurRadius: 4,
+                  offset: Offset(0, 4))
+            ],
+            border: Border.all(color: AppColors.color900, width: 1),
+            borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
             children: [
               Container(
-                // height: 48,
-                width: widget.width,
+                height: 48,
+                width: 300,
                 child: DropdownButton<String>(
-                  value: selectedValue,
+                  value: selectedHr,
                   hint: Text(
-                    widget.listOfValue[0],
-                    style: TextStyle(fontSize: 16, color: AppColors.color900),
+                    selectedHr,
+                    style: TextStyle(fontSize: 16, color: Colors.black),
                   ),
                   isExpanded: true,
                   underline: SizedBox(),
-                  items: widget.listOfValue.map((String value) {
+                  items:
+                      valueList.map<DropdownMenuItem<String>>((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
                       child: Text(
                         value,
                         style:
-                        TextStyle(fontSize: 16, color: AppColors.color900),
+                            TextStyle(fontSize: 16, color: AppColors.color900),
                       ),
                     );
                   }).toList(),
                   onChanged: (newValue) {
                     setState(() {
-                      selectedValue = newValue;
-                      hrController = selectedValue!;
+                      selectedHr = newValue!;
+                      hrController = selectedHr!;
                     });
                   },
                 ),
-              ),
+              )
             ],
           ),
         ),
