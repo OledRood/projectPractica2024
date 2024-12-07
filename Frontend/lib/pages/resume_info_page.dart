@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../bloc/bloc.dart';
+import '../models/resume_list.dart';
 import '../resources/app_colors.dart';
 import '../resources/status.dart';
 import '../types/full_resume.dart';
@@ -17,6 +18,8 @@ var commentsController = TextEditingController();
 String hrController = "";
 String statusController = '';
 int archivController = 0;
+late String startVacacnyController;
+late String startSourceController;
 
 class InfoResumePage extends StatefulWidget {
   const InfoResumePage({
@@ -132,10 +135,13 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                       controller: nameController,
                                     ),
                                     const SizedBox(height: 20),
-                                    ResumeTextInputWidget(
-                                      text: "Вакансия",
-                                      width: 200,
-                                      controller: vacancyController,
+                                    StreamBuilder<ResumeList>(
+                                      stream: bloc.resumeListSubject,
+                                      builder: (context, snapshot) {
+                                        return ResumeListWidget(
+                                            text: "Вакансия",
+                                            controller: vacancyController);
+                                      }
                                     ),
                                     const SizedBox(height: 20),
                                     ResumeTextInputWidget(
@@ -144,9 +150,8 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                       controller: ageController,
                                     ),
                                     const SizedBox(height: 20),
-                                    ResumeTextInputWidget(
+                                    ResumeListWidget(
                                       text: "Источник",
-                                      width: 200,
                                       controller: sourceController,
                                     ),
                                     const SizedBox(height: 20),
@@ -226,7 +231,7 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                     const SizedBox(
                                       height: 20,
                                     ),
-                                    ResumeTextWidget(
+                                    InputTextWidget(
                                       text: "Дата последнего изменения:",
                                       resumeInfo: resume.date_last_changes,
                                       width: 200.0,
@@ -271,10 +276,8 @@ class _InfoResumePageState extends State<InfoResumePage> {
                                     print('сохранить');
                                     savedInSubject(bloc, resume);
                                   },
-
                                 ),
                                 SizedBox(width: 20),
-
                                 RedButtonWidget(
                                   text: "Отменить изменения",
                                   height: 50,
@@ -296,6 +299,10 @@ class _InfoResumePageState extends State<InfoResumePage> {
   }
 
   void setDataInController(resume) {
+    startVacacnyController = resume.vacancy.toString();
+    startSourceController = resume.source.toString();
+
+
     vacancyController.text = resume.vacancy.toString();
     ageController.text = resume.age.toString();
     sourceController.text = resume.source.toString();
@@ -339,7 +346,7 @@ class _ArchivWidgetState extends State<ArchivWidget> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        ResumeTextWidget(
+        InputTextWidget(
           text: "Состояние",
           resumeInfo: archivController == 0 ? "Активно" : "В архиве",
           width: 160,
@@ -375,7 +382,6 @@ class _ArchivWidgetState extends State<ArchivWidget> {
     );
   }
 }
-
 
 class ResumeTextInputWidget extends StatelessWidget {
   final String text;
@@ -437,12 +443,12 @@ class ResumeTextInputWidget extends StatelessWidget {
   }
 }
 
-class ResumeTextWidget extends StatelessWidget {
+class InputTextWidget extends StatelessWidget {
   final String text;
   final dynamic resumeInfo;
   final double width;
 
-  const ResumeTextWidget({
+  const InputTextWidget({
     super.key,
     required this.text,
     required this.resumeInfo,
@@ -634,6 +640,97 @@ class HrDropDownWidget extends StatefulWidget {
   _HrDropDownWidgetState createState() => _HrDropDownWidgetState();
 }
 
+class DropdownWidget extends StatefulWidget {
+  final String valueController;
+  final String text;
+  final double width;
+  final List<String> listOfValue;
+
+  // final
+
+  const DropdownWidget(
+      {Key? key,
+      required this.text,
+      required this.width,
+      required this.listOfValue,
+      required this.valueController})
+      : super(key: key);
+
+  @override
+  _DropdownWidgetState createState() => _DropdownWidgetState();
+}
+
+class _DropdownWidgetState extends State<DropdownWidget> {
+  // String? selectedValue = widget.valueController;
+
+  // Список вариантов для выпадающего меню
+
+  @override
+  Widget build(BuildContext context) {
+    String? selectedValue = widget.valueController;
+
+    print('update');
+    return Container(
+      width: widget.width,
+      height: 40,
+      padding: EdgeInsets.only(left: 10),
+      decoration: BoxDecoration(
+        color: AppColors.color50,
+        boxShadow: [
+          BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 4,
+              offset: Offset(0, 4))
+        ],
+        border: Border.all(
+            //Todo поменять на ошибку
+            color:
+                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            width: false ? 2 : 1),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Container(
+        // height: 48,
+        width: widget.width,
+        child: DropdownButton<String>(
+          value: selectedValue,
+          hint: Text(
+            widget.valueController,
+            style: TextStyle(fontSize: 16, color: AppColors.color900),
+          ),
+          isExpanded: true,
+          underline: SizedBox(),
+          items: widget.listOfValue.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: TextStyle(fontSize: 16, color: AppColors.color900),
+              ),
+            );
+          }).toList(),
+          onChanged: (newValue) {
+            setState(() {
+              selectedValue = newValue;
+              if (selectedValue == 'Добавить') {
+                selectedValue = '';
+              }
+              switch (widget.text) {
+                case 'Вакансия':
+                  vacancyController.text = selectedValue!;
+                case "Hr":
+                  hrController = selectedValue!;
+                case "Источник":
+                  sourceController.text = selectedValue!;
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+}
+
 class _HrDropDownWidgetState extends State<HrDropDownWidget> {
   // Список вариантов для выпадающего меню
 
@@ -642,7 +739,6 @@ class _HrDropDownWidgetState extends State<HrDropDownWidget> {
     String selectedHr = hrController;
 
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
-    List<String> valueList = bloc.hrListSubject.value;
 
     // List<String> valueList = [
     //   "hr",
@@ -673,40 +769,186 @@ class _HrDropDownWidgetState extends State<HrDropDownWidget> {
           ),
           child: Row(
             children: [
-              Container(
+              SizedBox(
                 height: 48,
                 width: 300,
-                child: DropdownButton<String>(
-                  value: selectedHr,
-                  hint: Text(
-                    selectedHr,
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                  ),
-                  isExpanded: true,
-                  underline: SizedBox(),
-                  items:
-                      valueList.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style:
-                            TextStyle(fontSize: 16, color: AppColors.color900),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      selectedHr = newValue!;
-                      hrController = selectedHr!;
-                    });
-                  },
-                ),
+                child: StreamBuilder(
+                    stream: bloc.observeResumeListSubject(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData ||
+                          snapshot.data == null ||
+                          !snapshot.data!.hrList.contains(selectedHr)) {
+                        return SizedBox.shrink();
+                      }
+                      List<String> hrList = snapshot.data!.hrList;
+                      return DropdownButton<String>(
+                        value: selectedHr,
+                        hint: Text(
+                          selectedHr,
+                          style: TextStyle(fontSize: 16, color: Colors.black),
+                        ),
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        items: hrList
+                            .map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: TextStyle(
+                                  fontSize: 16, color: AppColors.color900),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          setState(() {
+                            selectedHr = newValue!;
+                            hrController = selectedHr!;
+                          });
+                        },
+                      );
+                    }),
               )
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class ResumeListWidget extends StatefulWidget {
+  final TextEditingController controller;
+  final String text;
+
+  const ResumeListWidget(
+      {super.key, required this.controller, required this.text});
+
+  @override
+  State<ResumeListWidget> createState() => _ResumeListWidgetState();
+}
+
+class _ResumeListWidgetState extends State<ResumeListWidget> {
+  @override
+  Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    return Row(
+      children: [
+        Text(widget.text,
+            style: TextStyle(color: AppColors.color900, fontSize: 20)),
+        SizedBox(width: 10),
+        StreamBuilder<ResumeList>(
+            stream: bloc.observeResumeListSubject(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data == null) {
+                return SizedBox.shrink();
+              }
+              late List<String> resumeList;
+              double width = 0;
+              if (widget.text == 'Вакансия') {
+                resumeList = snapshot.data!.vacancy;
+                width = 250;
+              } else if (widget.text == 'Источник') {
+                resumeList = snapshot.data!.source;
+                width = 250;
+              }
+
+              return ValueListenableBuilder(
+                  valueListenable: widget.controller,
+                  builder: (context, value, child) {
+                    print(value.text);
+                    if (!resumeList.contains(value.text)) {
+                      // if (resumeList.isEmpty) {
+                      //   print("inputTExtWidget");
+                      //   return InputTextWidget(
+                      //       text: widget.text,
+                      //       controller: widget.controller,
+                      //       isAge: false);
+                      // }
+                      return InputTextWithSuffixWidget(
+                        text: widget.text,
+                        controller: widget.controller,
+                        width: width,
+                        resumeList: resumeList,
+
+                      );
+                    }
+                    return DropdownWidget(
+                        valueController: value.text,
+                        text: widget.text,
+                        width: width,
+                        listOfValue: resumeList + ['Добавить']);
+                  });
+            }),
+      ],
+    );
+  }
+}
+
+class InputTextWithSuffixWidget extends StatelessWidget {
+  final String text;
+  final TextEditingController controller;
+  final double width;
+  final resumeList;
+
+  const InputTextWithSuffixWidget(
+      {super.key,
+      required this.text,
+      required this.controller,
+      required this.resumeList, required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+
+    return Container(
+      width: width,
+      height: 40,
+      padding: EdgeInsets.only(left: 10),
+      decoration: BoxDecoration(
+        color: AppColors.color50,
+        boxShadow: [
+          BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 4,
+              offset: Offset(0, 4))
+        ],
+        border: Border.all(
+            //Todo поменять на ошибку
+            color:
+                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            width: false ? 2 : 1),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: TextField(
+        controller: controller,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        decoration: InputDecoration(
+          hintText: "",
+          label: Text(
+            text,
+            style: TextStyle(color: AppColors.color900),
+          ),
+          border: InputBorder.none,
+          suffixIcon: IconButton(
+            icon: Icon(Icons.clear),
+            color: AppColors.color900,
+            onPressed: () {
+              switch (text) {
+                case 'Вакансия':
+                  vacancyController.text = startVacacnyController;
+                case 'Источник':
+                  sourceController.text = startSourceController;
+                //Доделать источник и добавить эту кнопку в вакансию
+              }
+            },
+          ),
+        ),
+      ),
     );
   }
 }

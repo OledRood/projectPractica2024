@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hr_monitor/models/resume_list.dart';
+import 'package:hr_monitor/widgets/buttonRedWidget.dart';
 import 'package:provider/provider.dart';
 
 import '../bloc/bloc.dart';
@@ -12,8 +14,7 @@ var ageController = TextEditingController();
 var sourceController = TextEditingController();
 var nameController = TextEditingController();
 var commentsController = TextEditingController();
-
-
+String hrController = '';
 
 class CreateResumePage extends StatelessWidget {
   const CreateResumePage({super.key});
@@ -21,9 +22,14 @@ class CreateResumePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
-    vacancyController.text = '';
+
+    vacancyController.text = (bloc.resumeListSubject.value.vacancy != [])
+        ? bloc.resumeListSubject.value.vacancy[0]
+        : '';
     ageController.text = '';
-    sourceController.text = '';
+    sourceController.text = (bloc.resumeListSubject.value.source != [])
+        ? bloc.resumeListSubject.value.source[0]
+        : '';
     nameController.text = '';
     commentsController.text = '';
     bloc.cleanResumeControllers();
@@ -31,112 +37,106 @@ class CreateResumePage extends StatelessWidget {
   }
 }
 
-
-
 class CreateResumePageContent extends StatefulWidget {
   const CreateResumePageContent({
     super.key,
   });
 
   @override
-  State<CreateResumePageContent> createState() => _CreateResumePageContentState();
+  State<CreateResumePageContent> createState() =>
+      _CreateResumePageContentState();
 }
 
 class _CreateResumePageContentState extends State<CreateResumePageContent> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
-    return Scaffold(
-      backgroundColor: AppColors.color50,
-      body: alert
-          ? AlertDialogWidget(
-              ExitTap: () {
-                ExitVoid(bloc, context);
-              },
-              onTapStay: () {
-                setState(() {
-                  alert = false;
-                });
-              },
-            )
-          : Stack(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        SizedBox(
-                          height: 487.5,
-                        ),
-                        ExitWidget(
-                          onTap: () {
-                            if (ageController.text != '' ||
-                                nameController.text != "" ||
-                                vacancyController.text != "" ||
-                                sourceController.text != "") {
-                              setState(() {
-                                alert = true;
-                              });
-                            } else {
-                              ExitVoid(bloc, context);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(width: 430)
-                  ],
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        // Row(children: [Text("Создание резюме")],),
-                        TextStateWidget(),
-                        const SizedBox(height: 20),
-                        InputTextWidget(
-                          text: "ФИО",
-                          controller: nameController,
-                          isAge: false,
-                        ),
-                        const SizedBox(height: 20),
-                        InputTextWidget(
-                          text: "Вакансия",
-                          controller: vacancyController,
-                          isAge: false,
-                        ),
-                        const SizedBox(height: 20),
-                        InputTextWidget(
-                            text: "Возраст",
-                            controller: ageController,
-                            isAge: true),
-                        const SizedBox(height: 20),
-                        InputTextWidget(
-                            text: "Источник",
-                            controller: sourceController,
-                            isAge: false),
-                        const SizedBox(height: 20),
-                        CommentsInputWidget(),
-                        const SizedBox(height: 20),
 
-                        SendResumeButton(),
+    return LayoutBuilder(
+      builder: (context, constraint) {
+        print(constraint.maxWidth);
+        bool isMinimum = constraint.maxWidth < 510;
+        return Scaffold(
+          backgroundColor: AppColors.color50,
+          body: alert
+              ? AlertDialogWidget(
+                  ExitTap: () {
+                    ExitVoid(bloc, context);
+                  },
+                  onTapStay: () {
+                    setState(() {
+                      alert = false;
+                    });
+                  },
+                )
+              : Stack(
+                  children: [
+                    (isMinimum) ? SizedBox.shrink() :ExitButton(
+                      onPress: () {
+                        if (ageController.text != '' ||
+                            nameController.text != "" ||
+                            vacancyController.text != "" ||
+                            sourceController.text != "") {
+                          setState(() {
+                            alert = true;
+                          });
+                        } else {
+                          ExitVoid(bloc, context);
+                        }
+                      },
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Column(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            const SizedBox(height: 15),
+                            // Row(children: [Text("Создание резюме")],),
+                            TextStateWidget(),
+                            const SizedBox(height: 20),
+                            InputTextWidget(
+                              text: "ФИО",
+                              controller: nameController,
+                              isAge: false,
+                            ),
+                            StreamBuilder(
+                                stream: bloc.observeRoleSubject(),
+                                builder: (contex, snapshot) {
+                                  if (snapshot.data == Role.hr_lead) {
+                                    return Column(children: [
+                                      const SizedBox(height: 20),
+                                      HrListWidget(),
+                                    ]);
+                                  }
+                                  return SizedBox.shrink();
+                                }),
+
+                            const SizedBox(height: 20),
+                            ResumeListWidget(
+                              text: 'Вакансия',
+                              controller: vacancyController,
+                            ),
+                            const SizedBox(height: 20),
+                            InputTextWidget(
+                                text: "Возраст",
+                                controller: ageController,
+                                isAge: true),
+                            const SizedBox(height: 20),
+                            ResumeListWidget(
+                                text: "Источник", controller: sourceController),
+                            const SizedBox(height: 20),
+                            CommentsInputWidget(),
+                            const SizedBox(height: 20),
+                            SendResumeButton(),
+                          ],
+                        ),
                       ],
                     ),
                   ],
                 ),
-              ],
-            ),
+        );
+      }
     );
   }
 
@@ -148,7 +148,64 @@ class _CreateResumePageContentState extends State<CreateResumePageContent> {
     commentsController.clear();
     bloc.cancelCreateSubscription();
     alert = false;
+    hrController = '';
     Navigator.pop(context);
+  }
+}
+
+class ResumeListWidget extends StatefulWidget {
+  final TextEditingController controller;
+  final String text;
+
+  const ResumeListWidget(
+      {super.key, required this.controller, required this.text});
+
+  @override
+  State<ResumeListWidget> createState() => _ResumeListWidgetState();
+}
+
+class _ResumeListWidgetState extends State<ResumeListWidget> {
+  @override
+  Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    return StreamBuilder<ResumeList>(
+        stream: bloc.observeResumeListSubject(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || snapshot.data == null) {
+            return SizedBox.shrink();
+          }
+          late List<String> resumeList;
+          if (widget.text == 'Вакансия') {
+            resumeList = snapshot.data!.vacancy;
+          } else if (widget.text == 'Источник') {
+            resumeList = snapshot.data!.source;
+          }
+
+          return ValueListenableBuilder(
+              valueListenable: widget.controller,
+              builder: (context, value, child) {
+                if (!resumeList.contains(value.text)) {
+                  print(resumeList);
+                  if (resumeList.isEmpty) {
+                    print("inputTExtWidget");
+                    return InputTextWidget(
+                        text: widget.text,
+                        controller: widget.controller,
+                        isAge: false);
+                  }
+                  return InputTextWithSuffixWidget(
+                    text: widget.text,
+                    controller: widget.controller,
+                    resumeList: resumeList,
+                  );
+                }
+                return DropdownWidget(
+                    text: widget.text,
+                    width: 200,
+                    listOfValue: resumeList + ['Добавить'],
+                    isArchiv: false);
+              });
+        });
   }
 }
 
@@ -164,8 +221,6 @@ class AlertDialogWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
-
     return Center(
         child: Container(
       height: 150,
@@ -303,6 +358,71 @@ class MainTextWidget extends StatelessWidget {
   }
 }
 
+class InputTextWithSuffixWidget extends StatelessWidget {
+  final String text;
+  final TextEditingController controller;
+  final resumeList;
+
+  const InputTextWithSuffixWidget(
+      {super.key,
+      required this.text,
+      required this.controller,
+      required this.resumeList});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 350,
+      height: 40,
+      padding: EdgeInsets.only(left: 10),
+      decoration: BoxDecoration(
+        color: AppColors.color50,
+        boxShadow: [
+          BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 4,
+              offset: Offset(0, 4))
+        ],
+        border: Border.all(
+            //Todo поменять на ошибку
+            color:
+                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            width: false ? 2 : 1),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: TextField(
+        controller: controller,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        decoration: InputDecoration(
+          hintText: "",
+          label: Text(
+            text,
+            style: TextStyle(color: AppColors.color900),
+          ),
+          border: InputBorder.none,
+          suffixIcon: IconButton(
+            icon: Icon(Icons.clear),
+            color: AppColors.color900,
+            onPressed: () {
+              switch (text) {
+                case 'Вакансия':
+                  vacancyController.text = resumeList[0];
+                case 'Источник':
+                  sourceController.text = resumeList[0];
+                //Доделать источник и добавить эту кнопку в вакансию
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class InputTextWidget extends StatefulWidget {
   final String text;
   final TextEditingController controller;
@@ -434,13 +554,14 @@ class _SendResumeButtonState extends State<SendResumeButton> {
     return StreamBuilder<StateRequest>(
         stream: bloc.observeStateCreateButton(),
         builder: (context, snapshot) {
-          print('SendResumeButtonState is start ${snapshot.data}');
           if (snapshot.data == StateRequest.loading) {
-            return ButtonWidget(
-                onTap: () {
-                  print('Было нажато но не обработано');
-                },
-                color: AppColors.color100);
+            return RedButtonWidget(
+              onTap: () {},
+              text: 'Загрузка',
+              width: 350,
+              height: 40,
+              focus: false,
+            );
           }
 
           if (snapshot.data == StateRequest.good) {
@@ -450,52 +571,217 @@ class _SendResumeButtonState extends State<SendResumeButton> {
               vacancyController.clear();
               nameController.clear();
               commentsController.clear();
+              hrController = "";
             });
           }
-          return ButtonWidget(
+          return RedButtonWidget(
             onTap: () {
               if (ageController.text != "") {
                 bloc.resumeVacancyControllerSubject.add(vacancyController.text);
                 bloc.resumeNameControllerSubject.add(nameController.text);
                 bloc.resumeAgeControllerSubject.add(ageController.text);
                 bloc.resumeSourceControllerSubject.add(sourceController.text);
-                bloc.resumeCommentsControllerSubject.add(commentsController.text);
+                bloc.resumeCommentsControllerSubject
+                    .add(commentsController.text);
+                bloc.resumeHrNameControllerSubject.add(hrController);
                 bloc.sendResumeToCreate();
               }
             },
-            color: AppColors.color900,
+            text: 'Добавить',
+            width: 350,
+            height: 40,
+            focus: true,
           );
         });
   }
 }
 
-class ButtonWidget extends StatelessWidget {
-  final VoidCallback onTap;
-  final Color color;
+// class ButtonWidget extends StatelessWidget {
+//   final VoidCallback onTap;
+//   final Color color;
+//
+//   const ButtonWidget({
+//     super.key,
+//     required this.onTap,
+//     required this.color,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return GestureDetector(
+//       onTap: onTap,
+//       child: Container(
+//         alignment: Alignment.center,
+//         width: 350,
+//         height: 40,
+//         decoration: BoxDecoration(
+//           color: color,
+//           borderRadius: BorderRadius.circular(9),
+//         ),
+//         child: Text("Добавить",
+//             style: TextStyle(
+//                 color: Colors.white,
+//                 fontSize: 16,
+//                 fontWeight: FontWeight.w400)),
+//       ),
+//     );
+//   }
+// }
 
-  const ButtonWidget({
+class HrListWidget extends StatefulWidget {
+  const HrListWidget({super.key});
+
+  @override
+  State<HrListWidget> createState() => _HrListWidgetState();
+}
+
+class _HrListWidgetState extends State<HrListWidget> {
+  @override
+  Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    return StreamBuilder<ResumeList>(
+        stream: bloc.observeResumeListSubject(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || snapshot.data == null) {
+            return SizedBox.shrink();
+          }
+          hrController = snapshot.data!.hrList[0];
+          return DropdownWidget(
+            text: 'Hr',
+            width: 200,
+            listOfValue: snapshot.data!.hrList,
+            isArchiv: false,
+          );
+        });
+  }
+}
+
+class DropdownWidget extends StatefulWidget {
+  final String text;
+  final double width;
+  final List<String> listOfValue;
+  final bool isArchiv;
+
+  // final
+
+  const DropdownWidget(
+      {Key? key,
+      required this.text,
+      required this.width,
+      required this.listOfValue,
+      required this.isArchiv})
+      : super(key: key);
+
+  @override
+  _DropdownWidgetState createState() => _DropdownWidgetState();
+}
+
+class _DropdownWidgetState extends State<DropdownWidget> {
+  String? selectedValue;
+
+  // Список вариантов для выпадающего меню
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 350,
+      height: 40,
+      padding: EdgeInsets.only(left: 10),
+      decoration: BoxDecoration(
+        color: AppColors.color50,
+        boxShadow: [
+          BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 4,
+              offset: Offset(0, 4))
+        ],
+        border: Border.all(
+            //Todo поменять на ошибку
+            color:
+                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            width: false ? 2 : 1),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Container(
+        // height: 48,
+        width: widget.width,
+        child: DropdownButton<String>(
+          value: selectedValue,
+          hint: Text(
+            widget.listOfValue[0],
+            style: TextStyle(fontSize: 16, color: AppColors.color900),
+          ),
+          isExpanded: true,
+          underline: SizedBox(),
+          items: widget.listOfValue.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: TextStyle(fontSize: 16, color: AppColors.color900),
+              ),
+            );
+          }).toList(),
+          onChanged: (newValue) {
+            setState(() {
+              selectedValue = newValue;
+              if (selectedValue == 'Добавить') {
+                selectedValue = '';
+              }
+              switch (widget.text) {
+                case 'Вакансия':
+                  vacancyController.text = selectedValue!;
+                case "Hr":
+                  hrController = selectedValue!;
+                case "Источник":
+                  sourceController.text = selectedValue!;
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class ExitButton extends StatelessWidget {
+  final VoidCallback onPress;
+
+  const ExitButton({
     super.key,
-    required this.onTap,
-    required this.color,
+    required this.onPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        alignment: Alignment.center,
-        width: 350,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(9),
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: IconButton(
+        onPressed: onPress,
+        icon: Icon(Icons.logout),
+        constraints: BoxConstraints(
+          minWidth: 70.0,
+          minHeight: 70.0,
         ),
-        child: Text("Добавить",
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w400)),
+        focusNode: FocusNode(skipTraversal: true),
+        color: AppColors.color50,
+        style: ButtonStyle(
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+          ),
+          shadowColor: WidgetStatePropertyAll(Colors.black),
+          elevation: WidgetStatePropertyAll(2),
+          backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+            (states) {
+              if (states.contains(WidgetState.hovered)) {
+                return AppColors.color800;
+              }
+              return AppColors.color900;
+            },
+          ),
+        ),
       ),
     );
   }

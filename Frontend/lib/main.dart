@@ -9,6 +9,7 @@ import 'package:hr_monitor/pages/search_resume_page.dart';
 import 'package:hr_monitor/pages/main_page.dart';
 import 'package:hr_monitor/pages/resume_info_page.dart';
 import 'package:hr_monitor/pages/statistics_page.dart';
+import 'package:hr_monitor/resources/app_colors.dart';
 import 'package:provider/provider.dart';
 
 import 'bloc/bloc.dart';
@@ -19,6 +20,7 @@ void main() {
       providers: [
         Provider<Bloc>(create: (_) => Bloc()),
       ],
+
       child: MyApp(),
     ),
   );
@@ -31,6 +33,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+
       onGenerateRoute: (RouteSettings settings) {
         // if (settings.name == '/MainPage/HrInfoResumePage') {
         //   final resumeId = settings.arguments as int;
@@ -64,6 +67,7 @@ class MyApp extends StatelessWidget {
 
       title: 'Practica',
       theme: ThemeData(
+        primaryColor: AppColors.color50,
         fontFamily: GoogleFonts.kurale().fontFamily,
         useMaterial3: true,
       ),

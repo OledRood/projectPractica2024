@@ -9,7 +9,7 @@ from flask_cors import CORS
 
 from models import entry, resume, statistics
 from models.create_user import create_new_user
-from models.hr_list import get_ht_list
+from models.hr_list import get_hr_list, get_lists
 
 
 
@@ -48,6 +48,7 @@ def login():
     data = request.get_json()
     name = data['username']
     password = data['password']
+
     result = entry.login(name, password)
     # {'result': True, 'id': 1234}
     return jsonify(result)
@@ -63,8 +64,9 @@ def create_resume():
     user_id = data['id']
     name = data['name']
     comments = data['comments']
+    hr_name = data['hr_name']
     # try:
-    resume.create(name=name, vacancy=vacancy, age=age, source=source, hr_user_id=user_id, comments=comments)  
+    resume.create(name=name, vacancy=vacancy, age=age, source=source, hr_user_id=user_id, comments=comments, hr_name=hr_name)  
     return jsonify({'response' : 'good'})
     # except:
         
@@ -93,7 +95,8 @@ def search_resume():
     to_date = data['to_date']
     
 
-    return resume.get_resume_with_filtres(search_text=search_text, vacancy=vacancy, age=age, name=name, source=source, archiv=archiv, status=status, user_id= user_id, hr_name_string=hr_name, to_date=to_date, from_date=from_date)
+
+    return jsonify(resume.get_resume_with_filtres(search_text=search_text, vacancy=vacancy, age=age, name=name, source=source, archiv=archiv, status=status, user_id= user_id, hr_name_string=hr_name, to_date=to_date, from_date=from_date))
     
 @app.route('/resume/update', methods=['POST'])
 def update_resume():
@@ -122,18 +125,25 @@ def update_resume():
 
 @app.route('/resume/getResume', methods=['POST'])
 def get_hr_resume():
-    data = request.get_json();
+    data = request.get_json()
     user_id = int(data['user_id'])
     
-    return jsonify(resume.get_resume(user_id=user_id));
+    return jsonify(resume.get_resume(user_id=user_id))
 
 
-@app.route('/hr_lead/getHrList', methods=['POST'])
-def get_hr_list():
+# @app.route('/hr_lead/getHrList', methods=['POST'])
+# def get_hr_list():
+#     data = request.get_json();
+#     user_id = int(data['user_id'])
+    
+#     return jsonify({'hr_list': get_hr_list(user_id=user_id)})
+
+
+@app.route('/resume/getListsVacancyHrSource', methods=['POST'])
+def getLists():
     data = request.get_json();
     user_id = int(data['user_id'])
-    
-    return jsonify({'hr_list': get_ht_list(user_id=user_id)});
+    return jsonify(get_lists(user_id))
 
 
 

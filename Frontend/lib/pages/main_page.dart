@@ -90,7 +90,6 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
-
 class MainPageContent extends StatefulWidget {
   final Role role;
 
@@ -104,89 +103,97 @@ class _MainPageContentState extends State<MainPageContent> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
-
+    bloc.sendGetResumeList();
     return Scaffold(
       backgroundColor: AppColors.color50,
-      body: Column(
-        children: [
-          SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  // Начать поиск по резюме
-                  ButtonWidget(
-                    text: "Поиск по резюме",
-                    width: 300,
-                    onPress: () {
-                      Navigator.pushNamed(
-                          context, '/MainPage/SearchResumePage');
-                    },
-                  ),
+      body: LayoutBuilder(builder: (context, constraint) {
+        print(constraint.maxWidth);
+        return Column(
+          children: [
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    // Начать поиск по резюме
+                    ButtonWidget(
+                      text: "Поиск по резюме",
+                      onPress: () {
+                        bloc.sendGetResumeList();
+                        Navigator.pushNamed(
+                            context, '/MainPage/SearchResumePage');
+                      },
+                      displayWidth: constraint.maxWidth,
+                    ),
 
-                  SizedBox(
-                    height: 20,
-                  ),
-                  // Добавить резюме
-                  ButtonWidget(
-                    text: "Создать резюме",
-                    width: 300,
-                    onPress: () {
-                      Navigator.pushNamed(
-                          context, '/MainPage/CreateResumePage');
-                    },
-                  ),
-                  SizedBox(height: 20),
-                  //Статистика
-                  ButtonWidget(onPress: () {
-                    bloc.getStatistic();
-                    Navigator.pushNamed(
-                        context, '/MainPage/StatisticsPage');
-                  }, text: 'Статистика', width: 300),
-                  SizedBox(height: 20),
-                  Row(
-                    children: [
-                      //Выход
-                      ButtonWidget(
-                          onPress: () {
-                            bloc.exit();
-                            Navigator.of(context).pushNamedAndRemoveUntil(
-                              "/Entrance",
-                              (Route<dynamic> route) => false,
-                            );
-                          },
-                          text: "Выход",
-                          width: 300),
-                    ],
-                  ),
-                  SizedBox(height: 357)
-                ],
-              ),
-              SizedBox(
-                width: 20,
-              ),
-              Column(
-                children: [
-                  //список текущих резюме
-                  ListOfResumeWidget(),
-                  SizedBox(
-                    height: 20,
-                  ),
-                ],
-              ),
-              SizedBox(
-                width: 1,
-              ),
-            ],
-          ),
-          SizedBox(
-            height: 20,
-          ),
-        ],
-      ),
+                    SizedBox(
+                      height: 20,
+                    ),
+                    // Добавить резюме
+                    ButtonWidget(
+                      text: "Создать резюме",
+                      onPress: () {
+                        Navigator.pushNamed(
+                            context, '/MainPage/CreateResumePage');
+                      },
+                      displayWidth: constraint.maxWidth,
+
+                    ),
+                    SizedBox(height: 20),
+                    //Статистика
+                    ButtonWidget(
+                      text: 'Статистика',
+                      onPress: () {
+                        bloc.getStatistic();
+                        Navigator.pushNamed(
+                            context, '/MainPage/StatisticsPage');
+                      },
+                      displayWidth: constraint.maxWidth,
+
+                    ),
+                    SizedBox(height: 20),
+                    //Выход
+                    ButtonWidget(
+                      text: "Выход",
+                      onPress: () {
+                        bloc.exit();
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          "/Entrance",
+                          (Route<dynamic> route) => false,
+                        );
+                      },
+                      displayWidth: constraint.maxWidth,
+
+                    ),
+                    // SizedBox(height: 357)
+                  ],
+                ),
+                SizedBox(
+                  width: 20,
+                ),
+                (constraint.maxWidth >= 738) ? Column(
+                  children: [
+                    //список текущих резюме
+                     ListOfResumeWidget() ,
+                    SizedBox(
+                      height: 20,
+                    ),
+                  ],
+                ) : SizedBox.shrink(),
+                SizedBox(
+                  width: 1,
+                ),
+              ],
+            ),
+            SizedBox(
+              height: 20,
+            ),
+          ],
+        );
+      }),
     );
   }
 }
@@ -194,22 +201,23 @@ class _MainPageContentState extends State<MainPageContent> {
 class ButtonWidget extends StatelessWidget {
   final VoidCallback onPress;
   final String text;
-  final double width;
-
+  final double displayWidth;
   const ButtonWidget({
     super.key,
     required this.onPress,
-    required this.text,
-    required this.width,
+    required this.text, required this.displayWidth,
   });
 
   @override
   Widget build(BuildContext context) {
+    TextButtonState textButtonState = getTextWidgetState(displayWidth);
     return TextButton(
         onPressed: onPress,
         style: ButtonStyle(
           alignment: Alignment.center,
-          fixedSize: WidgetStatePropertyAll(Size(width, 75)),
+          // maximumSize: WidgetStatePropertyAll(Size(300, 75)),
+          // minimumSize: WidgetStatePropertyAll((Size(150, 75))),
+          fixedSize: WidgetStatePropertyAll(getSizeByState(textButtonState, displayWidth)),
           shadowColor: WidgetStatePropertyAll(Colors.black),
           elevation: WidgetStatePropertyAll(2),
           splashFactory: NoSplash.splashFactory,
@@ -252,5 +260,26 @@ class ButtonWidget extends StatelessWidget {
         ),
         child: Text(text));
   }
+  Size getSizeByState(TextButtonState textButtonState, double displayWidth){
+    switch(textButtonState){
+      case TextButtonState.big:
+        return Size(300, 75);
+      case TextButtonState.adaptive:
+        return Size(displayWidth - 600, 75);
+      case TextButtonState.small:
+        return Size(300, 75);
+    }
+  }
+
+  TextButtonState getTextWidgetState(double displayWidth) {
+    if (displayWidth > 888) {
+      return TextButtonState.big;
+    } else if (displayWidth < 888 && displayWidth >= 738) {
+     return TextButtonState.adaptive;
+    } else {
+      return TextButtonState.small;
+    }
+  }
 }
 
+enum TextButtonState { big, adaptive, small }

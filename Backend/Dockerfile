@@ -1,10 +1,23 @@
-FROM python:3.12
+# # Используем официальный образ Python
+# FROM python:3.9-slim
 
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+# # Устанавливаем рабочую директорию
+# WORKDIR /app
 
-WORKDIR /app/src
-COPY src .
+# # Копируем файлы зависимостей
+# COPY requirements.txt .
 
-CMD [ "python", "main.py" ]
+# # Устанавливаем зависимости
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# # Копируем весь код
+# COPY . .
+
+# # Открываем порт 8080
+# EXPOSE 8080
+
+# # Переменная окружения для Flask
+# ENV FLASK_APP=main.py
+
+# # Команда для запуска Flask на порте 8080
+# CMD ["flask", "run", "--host=0.0.0.0", "--port=8080"]

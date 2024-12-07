@@ -1,4 +1,4 @@
-const String path = 'http://127.0.0.1:8080';
+const String path = 'http://localhost:8080';
 
 class Routes{
   const Routes._();
@@ -10,6 +10,7 @@ class Routes{
   static String loginRequest = '$path/user/login';
   static String updateResume = '$path/resume/update';
   static String getHrList = '$path/hr_lead/getHrList';
+  static String getLists = '$path/resume/getListsVacancyHrSource';
   static String getStatistic = '$path/resume/getStatistic';
 
 }

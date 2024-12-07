@@ -1,6 +1,7 @@
 import 'package:date_field/date_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hr_monitor/models/resume_list.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../bloc/bloc.dart';
@@ -26,6 +27,8 @@ final ageController = TextEditingController();
 DateTime? fromDataTimeController;
 DateTime? toDataTimeController;
 
+const double minStatisticsDisplayWidth = 934;
+
 final class ResumeSearchPage extends StatefulWidget {
   const ResumeSearchPage({super.key});
 
@@ -40,70 +43,42 @@ class _ResumeSearchPageState extends State<ResumeSearchPage> {
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
     clear(bloc);
-    bloc.getHrList();
     searchTextController.text = "";
-    return Scaffold(
-        backgroundColor: AppColors.color100,
-        body: Stack(
-          children: [
-            StreamBuilder<StateRequest>(
-                stream: bloc.stateSearchListWidget,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data == null) {
-                    return SizedBox.shrink();
-                  }
-                  // final data = StateSearchList.result;
-                  switch (snapshot.data) {
-                    // switch (data) {
-                    case null:
-                    case StateRequest.none:
-                      return const SizedBox.shrink();
-                    case StateRequest.error:
-                      return Center(
-                          child: Text(
-                        "Что-то сломалось...",
-                        style: TextStyle(
-                            color: AppColors.color300,
-                            fontSize: 80,
-                            fontWeight: FontWeight.w900),
-                      ));
-
-                    case StateRequest.loading:
-                      return CircularProgressIndicator();
-                    case StateRequest.good:
-                      return ContentListWidget(open: open);
-                    case StateRequest.nothingFound:
-                      return Container(
-                          child: Center(
-                        child: Text(
-                          'Ничего не найдено',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.color50),
-                        ),
-                      ));
-                    default:
-                      return Container();
-                  }
-                }),
-            Padding(
-              padding: const EdgeInsets.all(15.0),
-              child: Column(
-                children: [
-                  ContentAppBar(
-                      onTapFilteresButton: () {
-                        setState(() {
-                          open = !open;
-                        });
-                      },
-                      open: open,
-                      heigthAppBar: heigthAppBar),
-                  FiltersWidget(open: open),
-                ],
+    return LayoutBuilder(builder: (context, constraint) {
+      return Scaffold(
+          backgroundColor: AppColors.color100,
+          body: Stack(
+            children: [
+              //Список полученных результатов
+              ContentListWidget(
+                displayWidth: constraint.maxWidth,
               ),
-            ),
-          ],
-        ));
+              //Поиск и фильтры
+              Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: LayoutBuilder(builder: (context, constraint) {
+                  print(constraint.maxWidth);
+                  return Column(
+                    children: [
+                      ContentAppBar(
+                          onTapFilteresButton: () {
+                            setState(() {
+                              open = !open;
+                            });
+                          },
+                          open: open,
+                          heigthAppBar: heigthAppBar),
+                      FiltersWidget(
+                        open: open,
+                        displayWidth: constraint.maxWidth,
+                      )
+                    ],
+                  );
+                }),
+              ),
+            ],
+          ));
+    });
   }
 
   void clear(Bloc bloc) {
@@ -117,16 +92,72 @@ class _ResumeSearchPageState extends State<ResumeSearchPage> {
   }
 }
 
-class ContentListWidget extends StatefulWidget {
-  final bool open;
+class ContentListWidget extends StatelessWidget {
+  final double displayWidth;
 
-  const ContentListWidget({super.key, required this.open});
+  const ContentListWidget({super.key, required this.displayWidth});
 
   @override
-  State<ContentListWidget> createState() => _ContentListWidgetState();
+  Widget build(BuildContext context) {
+    final Bloc bloc = Provider.of<Bloc>(context, listen: true);
+    print('width: ${displayWidth - 120}');
+    return StreamBuilder<StateRequest>(
+        stream: bloc.stateSearchListWidget,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || snapshot.data == null) {
+            return SizedBox.shrink();
+          }
+          // final data = StateSearchList.result;
+          switch (snapshot.data) {
+            case StateRequest.none:
+              return const SizedBox.shrink();
+            case StateRequest.error:
+              return Center(
+                  child: Text(
+                "Что-то сломалось...",
+                style: TextStyle(
+                    color: AppColors.color300,
+                    fontSize: 80,
+                    fontWeight: FontWeight.w900),
+              ));
+
+            case StateRequest.loading:
+              return Center(child: CircularProgressIndicator());
+            case StateRequest.good:
+              return Padding(
+
+                padding: (displayWidth >= minStatisticsDisplayWidth)
+                    ? EdgeInsets.only(left: 102, right: displayWidth - 903)
+                    // : EdgeInsets.symmetric(horizontal: (displayWidth + 20 - 200)),
+                    : EdgeInsets.symmetric(horizontal: (20)),
+                child: ListWidget(open: open),
+              );
+            case StateRequest.nothingFound:
+              return Container(
+                  child: Center(
+                child: Text(
+                  'Ничего не найдено',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700, color: AppColors.color50),
+                ),
+              ));
+            default:
+              return Container();
+          }
+        });
+  }
 }
 
-class _ContentListWidgetState extends State<ContentListWidget> {
+class ListWidget extends StatefulWidget {
+  final bool open;
+
+  const ListWidget({super.key, required this.open});
+
+  @override
+  State<ListWidget> createState() => _ListWidgetState();
+}
+
+class _ListWidgetState extends State<ListWidget> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
@@ -147,12 +178,9 @@ class _ContentListWidgetState extends State<ContentListWidget> {
                       );
               }
               final content = snapshot.data![index - 1];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 120),
-                child: Container(
-                    alignment: Alignment.centerLeft,
-                    child: ResumeWidget(content: content)),
-              );
+              return Container(
+                  alignment: Alignment.centerLeft,
+                  child: ResumeWidget(content: content));
             },
             separatorBuilder: (BuildContext context, int index) {
               return SizedBox(
@@ -169,14 +197,22 @@ class _ContentListWidgetState extends State<ContentListWidget> {
   }
 }
 
-class ResumeWidget extends StatelessWidget {
+class ResumeWidget extends StatefulWidget {
+  final FullResumeInfo content;
+
   const ResumeWidget({
     super.key,
     required this.content,
   });
 
-  final FullResumeInfo content;
+
+  @override
+  State<ResumeWidget> createState() => _ResumeWidgetState();
+}
+
+class _ResumeWidgetState extends State<ResumeWidget> {
   final double title = 20;
+
   final double textFontSize = 19;
 
   @override
@@ -184,89 +220,84 @@ class ResumeWidget extends StatelessWidget {
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
 
     return GestureDetector(
-        onTap: () {
-          bloc.resumeIdControllerSubject.add(content.resumeId);
-          Navigator.pushNamed(context, '/MainPage/InfoResumePage');
-        },
-        child: Padding(
-          padding: const EdgeInsets.only(right: 100),
-          child: Container(
-            // width: 900,
-            // height: 120,
-            padding:
-                const EdgeInsets.only(left: 20, right: 20, bottom: 5, top: 10),
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-                color: AppColors.color900,
-                borderRadius: BorderRadius.circular(20)),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      content.fullName,
-                      style: TextStyle(
-                          color: AppColors.color100,
-                          fontSize: title,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
+      onTap: () {
+        bloc.resumeIdControllerSubject.add(widget.content.resumeId);
+        Navigator.pushNamed(context, '/MainPage/InfoResumePage');
+      },
+      child: Container(
+        // width: 900,
+        // height: 120,
+        padding: const EdgeInsets.only(left: 20, right: 20, bottom: 5, top: 10),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+            color: AppColors.color900, borderRadius: BorderRadius.circular(20)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Flexible(
+                child: Text(
+                  widget.content.fullName,
+                  style: TextStyle(
+                      color: AppColors.color100,
+                      fontSize: title,
+                      fontWeight: FontWeight.w700),
+                ),
               ),
-              SizedBox(
-                height: 5,
-              ),
-              Container(height: 0.5, width: 200, color: Colors.white),
-              SizedBox(height: 15),
-              Row(
-                children: [
-                  TextWidget(
-                    text: 'Вакансия: ${content.vacancy}',
-                    textFontSize: textFontSize,
-                  ),
-                  const SeparateWidget(),
-                  TextWidget(
-                      text: 'Источник:  ${content.source}',
-                      textFontSize: textFontSize),
-                  const SeparateWidget(),
-                  TextWidget(
-                      text: "Status ${content.status}",
-                      textFontSize: textFontSize),
-                ],
-              ),
-              SizedBox(height: 10),
-              Row(
-                children: [
-                  TextWidget(
-                      text: "Возраст: ${content.age}",
-                      textFontSize: textFontSize),
-                  const SeparateWidget(),
-                  TextWidget(
-                      text:
-                          'Состояние: ${(content.archiv == 1) ? 'В архиве' : 'Активно'}',
-                      textFontSize: textFontSize),
-                  StreamBuilder<Role>(
-                      stream: bloc.observeRoleSubject(),
-                      builder: (context, roleSnapshot) {
-                        if (roleSnapshot.data == Role.hr_lead) {
-                          return Row(
-                            children: [
-                              const SeparateWidget(),
-                              TextWidget(
-                                  text: 'Hr:  ${content.hrName}',
-                                  textFontSize: textFontSize),
-                            ],
-                          );
-                        } else {
-                          return SizedBox.shrink();
-                        }
-                      })
-                ],
-              )
-            ]),
+            ],
           ),
-        ));
+          SizedBox(
+            height: 5,
+          ),
+          Container(height: 0.5, width: 200, color: Colors.white),
+          SizedBox(height: 15),
+          Row(
+            children: [
+              TextWidget(
+                text: 'Вакансия: ${widget.content.vacancy}',
+                textFontSize: textFontSize,
+              ),
+              const SeparateWidget(),
+              TextWidget(
+                  text: 'Источник:  ${widget.content.source}',
+                  textFontSize: textFontSize),
+              const SeparateWidget(),
+              TextWidget(
+                  text: "Статус: ${widget.content.status}",
+                  textFontSize: textFontSize),
+            ],
+          ),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              TextWidget(
+                  text: "Возраст: ${widget.content.age}", textFontSize: textFontSize),
+              const SeparateWidget(),
+              TextWidget(
+                  text:
+                      'Состояние: ${(widget.content.archiv == 1) ? 'В архиве' : 'Активно'}',
+                  textFontSize: textFontSize),
+              StreamBuilder<Role>(
+                  stream: bloc.observeRoleSubject(),
+                  builder: (context, roleSnapshot) {
+                    if (roleSnapshot.data == Role.hr_lead) {
+                      return Row(
+                        children: [
+                          const SeparateWidget(),
+                          TextWidget(
+                              text: 'Hr:  ${widget.content.hrName}',
+                              textFontSize: textFontSize),
+                        ],
+                      );
+                    } else {
+                      return SizedBox.shrink();
+                    }
+                  }),
+            ],
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -294,7 +325,11 @@ class TextWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: TextStyle(color: AppColors.color200, fontSize: textFontSize),
+      style: TextStyle(
+        color: AppColors.color200,
+        fontSize: textFontSize,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
@@ -401,9 +436,11 @@ class IconButtonWidget extends StatelessWidget {
 }
 
 class FiltersWidget extends StatefulWidget {
+  final double displayWidth;
   final bool open;
 
-  const FiltersWidget({super.key, required this.open});
+  const FiltersWidget(
+      {super.key, required this.open, required this.displayWidth});
 
   @override
   State<FiltersWidget> createState() => _FiltersWidgetState();
@@ -423,7 +460,7 @@ class _FiltersWidgetState extends State<FiltersWidget> {
             height: 25,
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: AppColors.color50.withOpacity(0.9),
@@ -438,8 +475,11 @@ class _FiltersWidgetState extends State<FiltersWidget> {
               ],
             ),
             height: 150,
-            margin: const EdgeInsets.only(left: 70, right: 70),
-            child: Stack(
+            margin: (widget.displayWidth > minStatisticsDisplayWidth)
+                ? EdgeInsets.symmetric(horizontal: 70)
+                : EdgeInsets.zero,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,18 +505,18 @@ class _FiltersWidgetState extends State<FiltersWidget> {
                           isArchiv: false,
                         ),
                         SizedBox(width: 20),
-                        StreamBuilder<List<String>>(
-                            stream: bloc.observeHrList(),
+                        StreamBuilder<ResumeList>(
+                            stream: bloc.observeResumeListSubject(),
                             builder: (context, snapshot) {
                               if (!snapshot.hasData ||
                                   snapshot.data == null ||
-                                  snapshot.data!.isEmpty) {
+                                  bloc.roleSubject.value != Role.hr_lead) {
                                 return SizedBox.shrink();
                               }
                               return DropdownExample(
                                 text: 'Hr',
                                 width: 200,
-                                listOfValue: ['Любой'] + snapshot.data!,
+                                listOfValue: ["Любой"] + snapshot.data!.hrList,
                                 isArchiv: false,
                               );
                             })
@@ -506,7 +546,7 @@ class _FiltersWidgetState extends State<FiltersWidget> {
                         ],
                         isArchiv: true,
                       ),
-                      Expanded(child: SizedBox()),
+                      SizedBox(width: 23),
                       Text("Дата:",
                           style: TextStyle(
                               fontSize: 16, color: AppColors.color900)),
@@ -518,18 +558,6 @@ class _FiltersWidgetState extends State<FiltersWidget> {
                     const SizedBox(height: 5)
                   ],
                 ),
-                //Подпись об очистке фильтров
-                // Align(
-                //   alignment: Alignment.bottomRight,
-                //   child: Padding(
-                //     padding: const EdgeInsets.only(right: 10),
-                //     child: Text('if closed – the filters will be reset',
-                //         style: TextStyle(
-                //             fontSize: 10,
-                //             color: AppColors.color900,
-                //             fontWeight: FontWeight.w900)),
-                //   ),
-                // )
               ],
             ),
           ),

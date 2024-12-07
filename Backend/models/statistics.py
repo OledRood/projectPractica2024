@@ -93,6 +93,7 @@ def get_vacancy_stat(resume_id_list):
             
     close_base(connection=connection, cursor=cursor)
     # {'Водитель' : 2}
+    print(position_list)
     return func_get_count_element(position_list)
 
 # Получаем колчичесвто резюме каждого статуса у одного hr
@@ -136,7 +137,7 @@ def get_source_stat(resume_id_list):
 def get_name_hr(user_id):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-    query = '''SELECT username FROM user WHERE user_id = %s'''
+    query = '''SELECT username FROM User WHERE user_id = %s'''
     cursor.execute(query, (user_id,))
     name = cursor.fetchone()[0]
     return name

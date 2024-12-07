@@ -36,7 +36,8 @@ def close_base(cursor, connection):
 status_of_resume = {0: "Открыто", 1: "Изучено", 2: "Интервью", 3: "Прошли интервью", 4: "Техническое собеседование", 5: "Пройдено техническое собеседование", 6: "Оффер"}
 
 #------------------------------------------------------------------------------------------------------------
-def create(vacancy, age, source, hr_user_id, name, comments):
+def create(vacancy, age, source, hr_user_id, name, comments, hr_name):
+
     archiv = 0;
     status = status_of_resume[0]
     date_last_changes = datetime.now()
@@ -46,7 +47,10 @@ def create(vacancy, age, source, hr_user_id, name, comments):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     
-    
+    if(hr_name != ''):
+        select_query = 'select user_id from User where username = %s'
+        cursor.execute(select_query, (hr_name,))
+        hr_user_id = cursor.fetchone()[0]
     
     insert_query = "INSERT INTO resume (name, vacancy, age, status, date_last_changes, source, hr_id, archiv, comments)  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
     cursor.execute(insert_query, (name, vacancy, age, status, date_last_changes, source, hr_user_id, archiv, comments))
@@ -71,7 +75,7 @@ def update(vacancy, age, source, name, archiv, comments, status, resume_id, hr_n
     
     # СТОИТ ПОМНИТЬ ЧТО СОХРАНЕНИЕ ПРОИСХОДИТ ПО ИМЕНИ, А ЗНАЧИТ ВЕРОЯТНОСТЬ ОШИБКИ БОЛЬШЕ ЧЕМ ПРИ ID
     try:
-        cursor.execute("SELECT user_id FROM user WHERE username = %s", (hr_name,))
+        cursor.execute("SELECT user_id FROM User WHERE username = %s", (hr_name,))
         hr_id = cursor.fetchone()[0]
         
         
@@ -105,7 +109,7 @@ def update(vacancy, age, source, name, archiv, comments, status, resume_id, hr_n
 def get_hr_list(user_id):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-    cursor.execute("SELECT role FROM user WHERE user_id = %s", (user_id,))
+    cursor.execute("SELECT role FROM User WHERE user_id = %s", (user_id,))
     role_data = cursor.fetchone()[0]
     hr_list = []
     if(role_data == 'Hr_lead'):
@@ -130,7 +134,7 @@ def get_resume(user_id):
         cursor.execute("SELECT * FROM resume WHERE hr_id = %s", (hr_list[index], ))
         resumes_data = cursor.fetchall()
         for row in resumes_data:
-            cursor.execute("SELECT username FROM user WHERE user_id = %s", (row[8],))
+            cursor.execute("SELECT username FROM User WHERE user_id = %s", (row[8],))
             hr_name = cursor.fetchone()[0]
             resume = {
                 "resume_id": row[0],
@@ -154,7 +158,7 @@ def get_resume(user_id):
 def get_search_hr_id(hr_name):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-    cursor.execute("SELECT user_id from user where username = %s", (hr_name,))
+    cursor.execute("SELECT user_id from User where username = %s", (hr_name,))
     id = cursor.fetchone()[0]
     close_base(connection=connection, cursor=cursor)
     return id
@@ -243,7 +247,7 @@ def get_resume_with_filtres(search_text, vacancy, age, name, source, archiv, sta
 
             
         if not flag:
-            cursor.execute("SELECT username FROM user WHERE user_id = %s", (resume['hr_id'],))
+            cursor.execute("SELECT username FROM User WHERE user_id = %s", (resume['hr_id'],))
             hr_name = cursor.fetchone()
 
             resume['hr_name'] = hr_name['username']

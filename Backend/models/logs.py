@@ -4,8 +4,8 @@ import mysql.connector
 from datetime import datetime
 from dotenv import load_dotenv
 
-import time
-import random
+
+
 
 
 load_dotenv()
@@ -113,11 +113,4 @@ def update_logs(resume_id, index_old_status):
         close_base(connection=connection, cursor=cursor)
         print(f"Ошибка: {e}")
 
-
-
-def random_delay(min_seconds=5, max_seconds=30):
-    """Задает случайную задержку от min_seconds до max_seconds секунд."""
-    delay = random.uniform(min_seconds, max_seconds)
-    print(f"Задержка: {delay:.2f} секунд")
-    time.sleep(delay)
 
