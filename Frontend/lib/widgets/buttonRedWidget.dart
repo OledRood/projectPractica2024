@@ -1,7 +1,8 @@
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../resources/app_colors.dart';
+import '../resources/theme/theme.dart';
 
 class RedButtonWidget extends StatelessWidget {
   final VoidCallback onTap;
@@ -19,6 +20,7 @@ class RedButtonWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return TextButton(
         onPressed: onTap,
         focusNode: focus ? null : FocusNode(skipTraversal: true),
@@ -31,7 +33,7 @@ class RedButtonWidget extends StatelessWidget {
           overlayColor: WidgetStateProperty.resolveWith<Color?>(
                 (Set<WidgetState> states) {
               if (states.contains(WidgetState.pressed)) {
-                return AppColors.color900.withOpacity(0.3);
+                return palette.color900.withOpacity(0.3);
               }
               return null;
             },
@@ -40,12 +42,12 @@ class RedButtonWidget extends StatelessWidget {
                 (states) {
               //При наведении
               if (states.contains(WidgetState.hovered)) {
-                return AppColors.color800;
+                return palette.color800;
               } else if (states.contains(WidgetState.focused)) {
-                return AppColors.color700;
+                return palette.color700;
               }
               //Изначально
-              return AppColors.color900;
+              return palette.color900;
             },
           ),
           foregroundColor: WidgetStateProperty.resolveWith<Color?>(
@@ -55,7 +57,7 @@ class RedButtonWidget extends StatelessWidget {
               } else if (states.contains(WidgetState.focused)) {
                 return Colors.white;
               }
-              return AppColors.color50;
+              return palette.color50;
             },
           ),
           shape: WidgetStatePropertyAll(

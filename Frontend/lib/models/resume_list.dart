@@ -15,7 +15,11 @@ class ResumeList {
         source:
             List<String>.from(json['source'].map((item) => item.toString())),
       );
-
-  ResumeList(
-      {required this.vacancy, required this.hrList, required this.source});
+  // ResumeList(
+  //     {required this.vacancy, required this.hrList, required this.source});
+  ResumeList({
+    this.vacancy = const ["Error", "Сообщите", 'Пожалуйста', "Админу"], // Значение по умолчанию
+    this.hrList = const ["Error", "Сообщите", 'Пожалуйста', "Админу"],  // Значение по умолчанию
+    this.source = const ["Error", "Сообщите", 'Пожалуйста', "Админу"],  // Значение по умолчанию
+  });
 }

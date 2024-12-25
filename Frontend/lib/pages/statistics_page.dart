@@ -1,14 +1,14 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:hr_monitor/models/statistics/average_time.dart';
-import 'package:hr_monitor/pages/resume_info_page.dart';
+import 'package:hr_monitor/pages/info_resume_page.dart';
 import 'package:provider/provider.dart';
 
 import '../bloc/bloc.dart';
 import '../models/statistics/status_model.dart';
 import '../models/statistics/time.dart';
-import '../resources/app_colors.dart';
 import '../resources/status.dart';
+import '../resources/theme/theme.dart';
 import '../types/resume_statistics.dart';
 
 int pageCount = 0;
@@ -18,9 +18,10 @@ class StatisticsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     return Scaffold(
-        backgroundColor: AppColors.color50,
+        backgroundColor: palette.color50,
         body: StreamBuilder<StateRequest>(
             stream: bloc.observeStateStatisticsRequest(),
             builder: (context, state) {
@@ -126,6 +127,8 @@ class StatisticsData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return ScrollConfiguration(
       //Убрать плолсу прокрутки
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
@@ -137,13 +140,8 @@ class StatisticsData extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(height: 20),
-            Text(
-              "${resumeStatistics.name}",
-              style: TextStyle(
-                  color: AppColors.color900,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900),
-            ),
+            Text("${resumeStatistics.name}",
+                style: Theme.of(context).textTheme.headlineLarge),
             SizedBox(
               height: 30,
             ),
@@ -309,23 +307,25 @@ class MoveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Stack(
       children: [
         IconButton(
           onPressed: isEnable ? onPressed : null,
           // alignment: Alignment.center,
           icon: Icon(icon),
-          color: AppColors.color50,
-          disabledColor: AppColors.color50,
+          color: palette.color50,
+          disabledColor: palette.color50,
           constraints: BoxConstraints(
               maxWidth: 40.0, maxHeight: 100.0, minHeight: 100, minWidth: 40),
           style: ButtonStyle(
             backgroundColor: WidgetStateProperty.resolveWith<Color?>(
               (states) {
                 if (states.contains(WidgetState.hovered)) {
-                  return AppColors.color700;
+                  return palette.color700;
                 }
-                return AppColors.color900;
+                return palette.color900;
               },
             ),
           ),
@@ -355,6 +355,8 @@ class HistogramWidget extends StatefulWidget {
 class _HistogramWidgetState extends State<HistogramWidget> {
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Container(
       height: 280,
       width: 400,
@@ -381,7 +383,7 @@ class _HistogramWidgetState extends State<HistogramWidget> {
                     return BarTooltipItem(
                       '${rod.toY}',
                       TextStyle(
-                        color: AppColors.color900,
+                        color: palette.color900,
                         fontSize: 14,
                       ),
                     );
@@ -426,6 +428,8 @@ class _HistogramWidgetState extends State<HistogramWidget> {
   }
 
   List<BarChartGroupData> getBarGroups(StatusModel statusModel) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     List<double> listOfHeight = statusModel.getSortedListByStatus();
     // listOfHeight = [4, 5, 6, 7, 8, 1, 20];
     List<BarChartGroupData> listOfGroups = [];
@@ -438,7 +442,7 @@ class _HistogramWidgetState extends State<HistogramWidget> {
                 toY: listOfHeight[i],
                 width: 30,
                 // gradient: _barsGradient,
-                color: AppColors.color400)
+                color: palette.color400)
           ],
           showingTooltipIndicators: [0],
         ),
@@ -455,24 +459,27 @@ class CircularHistogramWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return PieChart(PieChartData(
         borderData: FlBorderData(show: false),
         sectionsSpace: 0,
         centerSpaceRadius: 0,
-        sections: showingSections()));
+        sections: showingSections(palette)));
   }
 
   // Секция данных для круговой диаграммы
-  List<PieChartSectionData> showingSections() {
+  List<PieChartSectionData> showingSections(palette) {
     // {Певец: 1, Повар: 1, Презедент: 1, вак: 1}
+
     List<String> keys = source.keys.toList();
     List<double> values =
         source.values.cast<double>().toList(); // Пример данных
     List<PieChartSectionData> sections = [];
 
     // Генерация цветов с использованием градиента
-    Color startColor = AppColors.color100;
-    Color endColor = AppColors.color800;
+    Color startColor = palette.color100;
+    Color endColor = palette.color800;
 
     for (int i = 0; i < values.length; i++) {
       double percentage = values[i] / values.reduce((a, b) => a + b);
@@ -506,6 +513,8 @@ class ExitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Padding(
       padding: EdgeInsets.all(20),
       child: IconButton(
@@ -516,7 +525,7 @@ class ExitButton extends StatelessWidget {
           minHeight: 70.0,
         ),
         focusNode: FocusNode(skipTraversal: true),
-        color: AppColors.color50,
+        color: palette.color50,
         style: ButtonStyle(
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
@@ -528,9 +537,9 @@ class ExitButton extends StatelessWidget {
           backgroundColor: WidgetStateProperty.resolveWith<Color?>(
             (states) {
               if (states.contains(WidgetState.hovered)) {
-                return AppColors.color800;
+                return palette.color800;
               }
-              return AppColors.color900;
+              return palette.color900;
             },
           ),
         ),
@@ -545,6 +554,7 @@ class RestartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    final palette = Provider.of<AppTheme>(context).palette;
 
     return Stack(
       children: [
@@ -558,7 +568,7 @@ class RestartWidget extends StatelessWidget {
               minHeight: 70.0,
             ),
             focusNode: FocusNode(skipTraversal: true),
-            color: AppColors.color50,
+            color: palette.color50,
             style: ButtonStyle(
               shape: WidgetStatePropertyAll(
                 RoundedRectangleBorder(
@@ -570,9 +580,9 @@ class RestartWidget extends StatelessWidget {
               backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                 (states) {
                   if (states.contains(WidgetState.hovered)) {
-                    return AppColors.color800;
+                    return palette.color800;
                   }
-                  return AppColors.color900;
+                  return palette.color900;
                 },
               ),
             ),

@@ -4,7 +4,7 @@ import 'package:hr_monitor/widgets/buttonRedWidget.dart';
 import 'package:provider/provider.dart';
 
 import '../bloc/bloc.dart';
-import '../resources/app_colors.dart';
+import '../resources/theme/theme.dart';
 
 var usernameError = false;
 var passwordError = false;
@@ -35,15 +35,21 @@ class _EntrancePageState extends State<EntrancePage> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    final palette = Provider.of<AppTheme>(context).palette;
+
     usernameError = false;
     passwordError = false;
     return Scaffold(
-        backgroundColor: AppColors.color50,
+        backgroundColor: palette.color50,
         body: StreamBuilder<StateRequest>(
             stream: bloc.observeStateLogInSubject(),
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data == null) {
-                return Center(child: Text('Программа сломалась :('));
+                return Center(
+                    child: Text(
+                  'Программа сломалась :(',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ));
               }
               if (snapshot.data == StateRequest.bad) {
                 usernameError = true;
@@ -116,7 +122,11 @@ class _WindowWidgetState extends State<WindowWidget> {
                   bloc.sendPassWordAndLogin();
                 }
                 setState(() {});
-              }, text: 'Войти', width: 350, height: 40, focus: true,
+              },
+              text: 'Войти',
+              width: 350,
+              height: 40,
+              focus: true,
             )
             // FocusTraversalGroup(child: LogInWidget()),
           ],
@@ -139,6 +149,8 @@ class _RequestStatusWidgetState extends State<RequestStatusWidget> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    final palette = Provider.of<AppTheme>(context).palette;
+
     bool isTextDeffault = (text == 'Вход');
 
     return Row(
@@ -148,7 +160,7 @@ class _RequestStatusWidgetState extends State<RequestStatusWidget> {
         Text(
           text,
           style: TextStyle(
-              color: AppColors.color900,
+              color: palette.color900,
               fontSize: 40,
               fontWeight: FontWeight.w900),
         ),
@@ -161,7 +173,7 @@ class _RequestStatusWidgetState extends State<RequestStatusWidget> {
                     children: [
                       text == "Вход" ? SizedBox(width: 220) : SizedBox.shrink(),
                       CircularProgressIndicator(
-                        color: AppColors.color900,
+                        color: palette.color900,
                         strokeWidth: 2.5,
                       ),
                     ],
@@ -242,6 +254,8 @@ class IconStatusWidget extends StatefulWidget {
 class _IconStatusWidgetState extends State<IconStatusWidget> {
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Tooltip(
       message: "Ошибка...",
       child: GestureDetector(
@@ -251,7 +265,7 @@ class _IconStatusWidgetState extends State<IconStatusWidget> {
             SizedBox(height: widget.height),
             Icon(
               widget.icon,
-              color: AppColors.color900,
+              color: palette.color900,
             ),
           ],
         ),
@@ -275,7 +289,7 @@ class UserInputWidget extends StatefulWidget {
 class _UserInputWidgetState extends State<UserInputWidget> {
   @override
   Widget build(BuildContext context) {
-    // final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    final palette = Provider.of<AppTheme>(context).palette;
     return GestureDetector(
       onTap: () {
         usernameError = false;
@@ -284,7 +298,7 @@ class _UserInputWidgetState extends State<UserInputWidget> {
         width: 350,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.color50,
+          color: palette.color50,
           boxShadow: [
             BoxShadow(
                 color: Color.fromRGBO(0, 0, 0, 0.05),
@@ -294,7 +308,7 @@ class _UserInputWidgetState extends State<UserInputWidget> {
           border: Border.all(
               color: usernameError
                   ? Color.fromRGBO(255, 51, 51, 0.50)
-                  : AppColors.color900,
+                  : palette.color900,
               width: usernameError ? 1 : 1),
           borderRadius: BorderRadius.circular(9),
         ),
@@ -306,14 +320,9 @@ class _UserInputWidgetState extends State<UserInputWidget> {
               usernameError = false;
             });
           },
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium,
           decoration: InputDecoration(
               hintText: widget.text,
-              contentPadding: EdgeInsets.only(bottom: 12),
-              border: InputBorder.none,
               prefixIcon: Icon(Icons.person_outline),
               suffixIcon: null),
           textAlign: TextAlign.left,
@@ -340,7 +349,7 @@ class _PasswordWidgetState extends State<PasswordWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    final palette = Provider.of<AppTheme>(context).palette;
     return GestureDetector(
       onTap: () {
         passwordError = false;
@@ -349,7 +358,7 @@ class _PasswordWidgetState extends State<PasswordWidget> {
         width: 350,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.color50,
+          color: palette.color50,
           boxShadow: [
             BoxShadow(
                 color: Color.fromRGBO(0, 0, 0, 0.05),
@@ -359,7 +368,7 @@ class _PasswordWidgetState extends State<PasswordWidget> {
           border: Border.all(
               color: passwordError
                   ? Color.fromRGBO(255, 51, 51, 0.50)
-                  : AppColors.color900,
+                  : palette.color900,
               width: passwordError ? 1 : 1),
           borderRadius: BorderRadius.circular(9),
         ),
@@ -379,10 +388,7 @@ class _PasswordWidgetState extends State<PasswordWidget> {
               passwordError = false;
             });
           },
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium,
           decoration: InputDecoration(
             suffixIcon: GestureDetector(
               child: Icon(hideText

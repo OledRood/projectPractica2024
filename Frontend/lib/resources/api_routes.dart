@@ -12,5 +12,11 @@ class Routes{
   static String getHrList = '$path/hr_lead/getHrList';
   static String getLists = '$path/resume/getListsVacancyHrSource';
   static String getStatistic = '$path/resume/getStatistic';
+  static String createUser = '$path/admin/registration';
+  static String getUsersList = '$path/admin/getUsersList';
+  static String getHrLeadList = '$path/admin/getHrLeadList';
+  static String getUserDatabase = '$path/admin/getAllTables';
+
+
 
 }

@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import mysql
 
 from models.resume import get_hr_list
+from models.token_operation import get_id_by_token
 
 load_dotenv()
 db_config = {
@@ -93,7 +94,7 @@ def get_vacancy_stat(resume_id_list):
             
     close_base(connection=connection, cursor=cursor)
     # {'Водитель' : 2}
-    print(position_list)
+
     return func_get_count_element(position_list)
 
 # Получаем колчичесвто резюме каждого статуса у одного hr
@@ -144,7 +145,12 @@ def get_name_hr(user_id):
     
 # Здесь получаем цельную статистику по user
 #-------------------------------------------------------------------------------------------    
-def get_resume_statistic(user_id):
+def get_resume_statistic(token):
+    
+    user_id = get_id_by_token(token)
+    if(user_id == False):
+        return {0: {'name' : 'token error'}}
+    
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     

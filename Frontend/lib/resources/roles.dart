@@ -23,4 +23,9 @@ class Roles {
     return role;
   }
 
+  static List<String> getAllStringRoles(){
+    final resultList = list.values.toList();
+    return resultList!;
+  }
+
 }

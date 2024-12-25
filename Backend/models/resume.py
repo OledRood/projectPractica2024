@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 
 from models.logs import add_logs
+from models.token_operation import get_id_by_token
 
 
 
@@ -36,13 +37,20 @@ def close_base(cursor, connection):
 status_of_resume = {0: "Открыто", 1: "Изучено", 2: "Интервью", 3: "Прошли интервью", 4: "Техническое собеседование", 5: "Пройдено техническое собеседование", 6: "Оффер"}
 
 #------------------------------------------------------------------------------------------------------------
-def create(vacancy, age, source, hr_user_id, name, comments, hr_name):
+def create(vacancy, age, source, token, name, comments, hr_name):
 
+
+    user_id = get_id_by_token(token)
+    if(user_id == False):
+        return 'token error'
+    
+    
+    
     archiv = 0;
     status = status_of_resume[0]
     date_last_changes = datetime.now()
     age = int(age)
-    hr_user_id = int(hr_user_id)
+    hr_user_id = user_id
     
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
@@ -61,12 +69,17 @@ def create(vacancy, age, source, hr_user_id, name, comments, hr_name):
     
     add_logs(resume_id=resume_id, new_status=status)
     print('created')
+    return 'created'
     
     
 #------------------------------------------------------------------------------------------------------------ 
-def update(vacancy, age, source, name, archiv, comments, status, resume_id, hr_name):
+def update(vacancy, age, source, name, archiv, comments, status, resume_id, hr_name, token):
     date_last_changes = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     age = int(age)
+    
+    
+    if(get_id_by_token(token) == False):
+        return "token error"
     
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
@@ -123,7 +136,10 @@ def get_hr_list(user_id):
 
 
 #------------------------------------------------------------------------------------------------------------
-def get_resume(user_id):
+def get_resume(token):
+    user_id = get_id_by_token(token)
+    if(user_id == False):
+        return [{'resume_id' : 'token error'}]
     hr_list = get_hr_list(user_id=user_id)
     resumes = []
 
@@ -181,7 +197,13 @@ def check_to_date(to_date, resume_date_create):
     else:
         return False
     
-def get_resume_with_filtres(search_text, vacancy, age, name, source, archiv, status, user_id, hr_name_string, to_date, from_date):
+def get_resume_with_filtres(search_text, vacancy, age, name, source, archiv, status, token, hr_name_string, to_date, from_date):
+    
+    user_id = get_id_by_token(token)
+    if(user_id == False):
+        print('token error in search')
+        return 'token error'
+    
     hr_list = get_hr_list(user_id=user_id)
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()

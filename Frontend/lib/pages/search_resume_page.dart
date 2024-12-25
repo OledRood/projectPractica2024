@@ -5,8 +5,8 @@ import 'package:hr_monitor/models/resume_list.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../bloc/bloc.dart';
-import '../resources/app_colors.dart';
 import '../resources/status.dart';
+import '../resources/theme/theme.dart';
 import '../types/full_resume.dart';
 
 bool open = true;
@@ -41,12 +41,13 @@ class _ResumeSearchPageState extends State<ResumeSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
     clear(bloc);
     searchTextController.text = "";
     return LayoutBuilder(builder: (context, constraint) {
       return Scaffold(
-          backgroundColor: AppColors.color100,
+          backgroundColor: palette.color100,
           body: Stack(
             children: [
               //Список полученных результатов
@@ -99,6 +100,7 @@ class ContentListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
     print('width: ${displayWidth - 120}');
     return StreamBuilder<StateRequest>(
@@ -116,20 +118,22 @@ class ContentListWidget extends StatelessWidget {
                   child: Text(
                 "Что-то сломалось...",
                 style: TextStyle(
-                    color: AppColors.color300,
+                    color: palette.color300,
                     fontSize: 80,
                     fontWeight: FontWeight.w900),
               ));
 
             case StateRequest.loading:
               return Center(child: CircularProgressIndicator());
+            case StateRequest.tokenError:
+              return Center(child: Text('Начат новый сеанс\nперезайдите заново\n в приложеие', style: Theme.of(context).textTheme.headlineMedium,));
             case StateRequest.good:
               return Padding(
 
                 padding: (displayWidth >= minStatisticsDisplayWidth)
-                    ? EdgeInsets.only(left: 102, right: displayWidth - 903)
+                    ?EdgeInsets.only(left: 102, right: 200):
+              EdgeInsets.symmetric(horizontal: 20),
                     // : EdgeInsets.symmetric(horizontal: (displayWidth + 20 - 200)),
-                    : EdgeInsets.symmetric(horizontal: (20)),
                 child: ListWidget(open: open),
               );
             case StateRequest.nothingFound:
@@ -138,7 +142,7 @@ class ContentListWidget extends StatelessWidget {
                 child: Text(
                   'Ничего не найдено',
                   style: TextStyle(
-                      fontWeight: FontWeight.w700, color: AppColors.color50),
+                      fontWeight: FontWeight.w700, color: palette.color50),
                 ),
               ));
             default:
@@ -218,6 +222,7 @@ class _ResumeWidgetState extends State<ResumeWidget> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
+    final palette = Provider.of<AppTheme>(context).palette;
 
     return GestureDetector(
       onTap: () {
@@ -230,7 +235,7 @@ class _ResumeWidgetState extends State<ResumeWidget> {
         padding: const EdgeInsets.only(left: 20, right: 20, bottom: 5, top: 10),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-            color: AppColors.color900, borderRadius: BorderRadius.circular(20)),
+            color: palette.color800, borderRadius: BorderRadius.circular(20)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -239,7 +244,7 @@ class _ResumeWidgetState extends State<ResumeWidget> {
                 child: Text(
                   widget.content.fullName,
                   style: TextStyle(
-                      color: AppColors.color100,
+                      color: palette.color100,
                       fontSize: title,
                       fontWeight: FontWeight.w700),
                 ),
@@ -323,10 +328,12 @@ class TextWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Text(
       text,
       style: TextStyle(
-        color: AppColors.color200,
+        color: palette.color200,
         fontSize: textFontSize,
         overflow: TextOverflow.ellipsis,
       ),
@@ -405,6 +412,8 @@ class IconButtonWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return IconButton(
       onPressed: onPress,
       icon: Icon(icon),
@@ -413,7 +422,7 @@ class IconButtonWidget extends StatelessWidget {
         minHeight: 60.0,
       ),
       focusNode: FocusNode(skipTraversal: true),
-      color: AppColors.color900,
+      color: palette.color900,
       style: ButtonStyle(
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
@@ -425,9 +434,9 @@ class IconButtonWidget extends StatelessWidget {
         backgroundColor: WidgetStateProperty.resolveWith<Color?>(
           (states) {
             if (states.contains(WidgetState.hovered)) {
-              return AppColors.color50;
+              return palette.color50;
             }
-            return AppColors.color50.withOpacity(0.9);
+            return palette.color50.withOpacity(0.9);
           },
         ),
       ),
@@ -452,6 +461,7 @@ class _FiltersWidgetState extends State<FiltersWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
     if (widget.open) {
       return Column(
@@ -463,7 +473,7 @@ class _FiltersWidgetState extends State<FiltersWidget> {
             padding: EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
-              color: AppColors.color50.withOpacity(0.9),
+              color: palette.color50.withOpacity(0.9),
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
@@ -549,7 +559,7 @@ class _FiltersWidgetState extends State<FiltersWidget> {
                       SizedBox(width: 23),
                       Text("Дата:",
                           style: TextStyle(
-                              fontSize: 16, color: AppColors.color900)),
+                              fontSize: 16, color: palette.color900)),
                       SizedBox(width: 10),
                       TimeFilterWidget(label: 'От'),
                       SizedBox(width: 20),
@@ -579,6 +589,8 @@ class TimeFilterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Container(
       height: 65,
       width: 230,
@@ -586,7 +598,7 @@ class TimeFilterWidget extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(width: 0.5, color: AppColors.color600)),
+          border: Border.all(width: 0.5, color: palette.color600)),
       child: DateTimeFormField(
         padding: EdgeInsets.only(top: 2, right: 2),
         decoration: InputDecoration(
@@ -617,12 +629,14 @@ class SearchWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Container(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
         alignment: Alignment.center,
         height: heightAppBar,
         decoration: BoxDecoration(
-          color: AppColors.color50.withOpacity(0.9),
+          color: palette.color50.withOpacity(0.9),
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
@@ -637,7 +651,7 @@ class SearchWidget extends StatelessWidget {
           autofocus: true,
           controller: searchTextController,
           style: TextStyle(
-            color: AppColors.color900,
+            color: palette.color900,
             fontSize: 18,
           ),
         ));
@@ -665,11 +679,13 @@ class _ItemWidgetState extends State<ItemWidget> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: true);
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Row(
       children: [
         Text(
           "${widget.text}:",
-          style: TextStyle(fontSize: 16, color: AppColors.color900),
+          style: TextStyle(fontSize: 16, color: palette.color900),
         ),
         SizedBox(
           width: 16,
@@ -679,7 +695,7 @@ class _ItemWidgetState extends State<ItemWidget> {
           padding: EdgeInsets.only(left: 19, right: 5, top: 7, bottom: 7),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(width: 0.5, color: AppColors.color600)),
+              border: Border.all(width: 0.5, color: palette.color600)),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -689,9 +705,9 @@ class _ItemWidgetState extends State<ItemWidget> {
                 width: widget.width,
                 height: 30,
 
-                // color: AppColors.color700,
+                // color: palette.color700,
                 child: TextField(
-                  style: TextStyle(fontSize: 16, color: AppColors.color900),
+                  style: TextStyle(fontSize: 16, color: palette.color900),
                   controller: widget.controller,
                   onSubmitted: (value) {
                     setState(() {
@@ -734,7 +750,7 @@ class _ItemWidgetState extends State<ItemWidget> {
                 child: Container(
                   margin: EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                      color: AppColors.color900,
+                      color: palette.color900,
                       borderRadius: BorderRadius.circular(20)),
                   alignment: Alignment.center,
                   height: 25,
@@ -742,7 +758,7 @@ class _ItemWidgetState extends State<ItemWidget> {
                   child: Icon(
                     check ? Icons.check : Icons.close,
                     size: 17,
-                    color: AppColors.color50,
+                    color: palette.color50,
                   ),
                 ),
               )
@@ -794,18 +810,19 @@ class _DropdownExampleState extends State<DropdownExample> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return Row(
       children: [
         Text(
           "${widget.text}:",
-          style: TextStyle(fontSize: 16, color: AppColors.color900),
+          style: TextStyle(fontSize: 16, color: palette.color900),
         ),
         SizedBox(width: 16),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(width: 0.5, color: AppColors.color600),
+            border: Border.all(width: 0.5, color: palette.color600),
           ),
           child: Row(
             children: [
@@ -816,7 +833,7 @@ class _DropdownExampleState extends State<DropdownExample> {
                   value: selectedValue,
                   hint: Text(
                     widget.listOfValue[0],
-                    style: TextStyle(fontSize: 16, color: AppColors.color900),
+                    style: TextStyle(fontSize: 16, color: palette.color900),
                   ),
                   isExpanded: true,
                   underline: SizedBox(),
@@ -826,7 +843,7 @@ class _DropdownExampleState extends State<DropdownExample> {
                       child: Text(
                         value,
                         style:
-                            TextStyle(fontSize: 16, color: AppColors.color900),
+                            TextStyle(fontSize: 16, color: palette.color900),
                       ),
                     );
                   }).toList(),

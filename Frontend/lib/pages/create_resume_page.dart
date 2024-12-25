@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hr_monitor/models/resume_list.dart';
+import 'package:hr_monitor/pages/main_page.dart';
 import 'package:hr_monitor/widgets/buttonRedWidget.dart';
 import 'package:provider/provider.dart';
 
 import '../bloc/bloc.dart';
-import '../resources/app_colors.dart';
+import '../resources/theme/theme.dart';
 
 var alert = false;
 
@@ -51,93 +52,93 @@ class _CreateResumePageContentState extends State<CreateResumePageContent> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    final palette = Provider.of<AppTheme>(context).palette;
 
-    return LayoutBuilder(
-      builder: (context, constraint) {
-        print(constraint.maxWidth);
-        bool isMinimum = constraint.maxWidth < 510;
-        return Scaffold(
-          backgroundColor: AppColors.color50,
-          body: alert
-              ? AlertDialogWidget(
-                  ExitTap: () {
-                    ExitVoid(bloc, context);
-                  },
-                  onTapStay: () {
-                    setState(() {
-                      alert = false;
-                    });
-                  },
-                )
-              : Stack(
-                  children: [
-                    (isMinimum) ? SizedBox.shrink() :ExitButton(
-                      onPress: () {
-                        if (ageController.text != '' ||
-                            nameController.text != "" ||
-                            vacancyController.text != "" ||
-                            sourceController.text != "") {
-                          setState(() {
-                            alert = true;
-                          });
-                        } else {
-                          ExitVoid(bloc, context);
-                        }
-                      },
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Column(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            const SizedBox(height: 15),
-                            // Row(children: [Text("Создание резюме")],),
-                            TextStateWidget(),
-                            const SizedBox(height: 20),
-                            InputTextWidget(
-                              text: "ФИО",
-                              controller: nameController,
-                              isAge: false,
-                            ),
-                            StreamBuilder(
-                                stream: bloc.observeRoleSubject(),
-                                builder: (contex, snapshot) {
-                                  if (snapshot.data == Role.hr_lead) {
-                                    return Column(children: [
-                                      const SizedBox(height: 20),
-                                      HrListWidget(),
-                                    ]);
-                                  }
-                                  return SizedBox.shrink();
-                                }),
-
-                            const SizedBox(height: 20),
-                            ResumeListWidget(
-                              text: 'Вакансия',
-                              controller: vacancyController,
-                            ),
-                            const SizedBox(height: 20),
-                            InputTextWidget(
-                                text: "Возраст",
-                                controller: ageController,
-                                isAge: true),
-                            const SizedBox(height: 20),
-                            ResumeListWidget(
-                                text: "Источник", controller: sourceController),
-                            const SizedBox(height: 20),
-                            CommentsInputWidget(),
-                            const SizedBox(height: 20),
-                            SendResumeButton(),
-                          ],
+    return LayoutBuilder(builder: (context, constraint) {
+      print(constraint.maxWidth);
+      bool isMinimum = constraint.maxWidth < 510;
+      return Scaffold(
+        backgroundColor: palette.color50,
+        body: alert
+            ? AlertDialogWidget(
+                ExitTap: () {
+                  ExitVoid(bloc, context);
+                },
+                onTapStay: () {
+                  setState(() {
+                    alert = false;
+                  });
+                },
+              )
+            : Stack(
+                children: [
+                  (isMinimum)
+                      ? SizedBox.shrink()
+                      : ExitButton(
+                          onPress: () {
+                            if (ageController.text != '' ||
+                                nameController.text != ""
+                                ) {
+                              setState(() {
+                                alert = true;
+                              });
+                            } else {
+                              ExitVoid(bloc, context);
+                            }
+                          },
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-        );
-      }
-    );
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Column(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          const SizedBox(height: 15),
+                          // Row(children: [Text("Создание резюме")],),
+                          TextStateWidget(),
+                          const SizedBox(height: 20),
+                          InputTextWidget(
+                            text: "ФИО",
+                            controller: nameController,
+                            isAge: false,
+                          ),
+                          StreamBuilder(
+                              stream: bloc.observeRoleSubject(),
+                              builder: (contex, snapshot) {
+                                if (snapshot.data == Role.hr_lead) {
+                                  return Column(children: [
+                                    const SizedBox(height: 20),
+                                    HrListWidget(),
+                                  ]);
+                                }
+                                return SizedBox.shrink();
+                              }),
+
+                          const SizedBox(height: 20),
+                          ResumeListWidget(
+                            text: 'Вакансия',
+                            controller: vacancyController,
+                          ),
+                          const SizedBox(height: 20),
+                          InputTextWidget(
+                              text: "Возраст",
+                              controller: ageController,
+                              isAge: true),
+                          const SizedBox(height: 20),
+                          ResumeListWidget(
+                              text: "Источник", controller: sourceController),
+                          const SizedBox(height: 20),
+                          CommentsInputWidget(),
+                          const SizedBox(height: 20),
+                          SendResumeButton(),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+      );
+    });
   }
 
   void ExitVoid(Bloc bloc, context) {
@@ -221,13 +222,14 @@ class AlertDialogWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return Center(
         child: Container(
       height: 150,
       width: 300,
       alignment: Alignment.bottomCenter,
       decoration: BoxDecoration(
-        color: AppColors.color200,
+        color: palette.color200,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -238,14 +240,17 @@ class AlertDialogWidget extends StatelessWidget {
           Center(
               child: Text(
             'Данные не сохраняться!',
-            style: TextStyle(color: AppColors.color50),
+            style: Theme.of(context).textTheme.headlineMedium,
           )),
           const Expanded(child: SizedBox()),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                  onTap: ExitTap, child: ButtonOnAlertDialog(text: "Выйти")),
+                  onTap: ExitTap,
+                  child: ButtonOnAlertDialog(
+                    text: "Выйти",
+                  )),
               GestureDetector(
                 onTap: onTapStay,
                 child: ButtonOnAlertDialog(text: "Остаться"),
@@ -268,17 +273,18 @@ class ButtonOnAlertDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return Container(
         alignment: Alignment.center,
         height: 40,
         width: 150,
         decoration: BoxDecoration(
-            // color: AppColors.color800,
+            // color: palette.color800,
             borderRadius: BorderRadius.circular(2),
-            border: Border.all(color: AppColors.color50, width: 0.5)),
+            border: Border.all(color: palette.color50, width: 0.5)),
         child: Text(
           text,
-          style: TextStyle(color: AppColors.color50),
+          style: Theme.of(context).textTheme.bodyMedium,
         ));
   }
 }
@@ -293,6 +299,7 @@ class ExitWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -300,7 +307,7 @@ class ExitWidget extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-            color: AppColors.color900, borderRadius: BorderRadius.circular(10)),
+            color: palette.color900, borderRadius: BorderRadius.circular(10)),
         child: Icon(
           Icons.logout,
           color: Colors.white,
@@ -331,6 +338,8 @@ class TextStateWidget extends StatelessWidget {
               return MainTextWidget(text: "Ошибка");
             // case StateRequest.idError:
             //   return MainTextWidget(text: "Перезайдите");
+            case StateRequest.tokenError:
+              return MainTextWidget(text: 'Ошибка токена');
             case StateRequest.good:
               return MainTextWidget(text: "Резюме добавлено");
             default:
@@ -350,11 +359,7 @@ class MainTextWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text,
-        style: TextStyle(
-            color: AppColors.color900,
-            fontSize: 40,
-            fontWeight: FontWeight.w900));
+    return Text(text, style: Theme.of(context).textTheme.headlineLarge);
   }
 }
 
@@ -371,12 +376,13 @@ class InputTextWithSuffixWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return Container(
       width: 350,
       height: 40,
       padding: EdgeInsets.only(left: 10),
       decoration: BoxDecoration(
-        color: AppColors.color50,
+        color: palette.color50,
         boxShadow: [
           BoxShadow(
               color: Color.fromRGBO(0, 0, 0, 0.05),
@@ -385,28 +391,23 @@ class InputTextWithSuffixWidget extends StatelessWidget {
         ],
         border: Border.all(
             //Todo поменять на ошибку
-            color:
-                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            color: false ? Color.fromRGBO(255, 51, 51, 0.50) : palette.color900,
             width: false ? 2 : 1),
         borderRadius: BorderRadius.circular(9),
       ),
       child: TextField(
         controller: controller,
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium,
         decoration: InputDecoration(
           hintText: "",
           label: Text(
             text,
-            style: TextStyle(color: AppColors.color900),
+            style: TextStyle(color: palette.color900),
           ),
           border: InputBorder.none,
           suffixIcon: IconButton(
             icon: Icon(Icons.clear),
-            color: AppColors.color900,
+            color: palette.color900,
             onPressed: () {
               switch (text) {
                 case 'Вакансия':
@@ -442,12 +443,13 @@ class InputTextWidget extends StatefulWidget {
 class _InputTextWidgetState extends State<InputTextWidget> {
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return Container(
       width: 350,
-      height: 40,
-      padding: EdgeInsets.only(left: 10),
+      height: 45,
+      padding: EdgeInsets.only(left: 10, top: 5, bottom: 2),
       decoration: BoxDecoration(
-        color: AppColors.color50,
+        color: palette.color50,
         boxShadow: [
           BoxShadow(
               color: Color.fromRGBO(0, 0, 0, 0.05),
@@ -456,8 +458,7 @@ class _InputTextWidgetState extends State<InputTextWidget> {
         ],
         border: Border.all(
             //Todo поменять на ошибку
-            color:
-                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            color: false ? Color.fromRGBO(255, 51, 51, 0.50) : palette.color900,
             width: false ? 2 : 1),
         borderRadius: BorderRadius.circular(9),
       ),
@@ -468,16 +469,12 @@ class _InputTextWidgetState extends State<InputTextWidget> {
             // usernameError = false;
           });
         },
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium,
         decoration: InputDecoration(
             hintText: "",
             label: Text(
               widget.text,
-              style: TextStyle(color: AppColors.color900),
+              // style: TextStyle(color: palette.color900),
             ),
             border: InputBorder.none,
             suffixIcon: null),
@@ -496,12 +493,13 @@ class CommentsInputWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return Container(
       width: 350,
       height: 150,
       padding: EdgeInsets.only(left: 10),
       decoration: BoxDecoration(
-        color: AppColors.color50,
+        color: palette.color50,
         boxShadow: [
           BoxShadow(
               color: Color.fromRGBO(0, 0, 0, 0.05),
@@ -510,8 +508,7 @@ class CommentsInputWidget extends StatelessWidget {
         ],
         border: Border.all(
             //Todo поменять на ошибку
-            color:
-                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            color: false ? Color.fromRGBO(255, 51, 51, 0.50) : palette.color900,
             width: false ? 2 : 1),
         borderRadius: BorderRadius.circular(9),
       ),
@@ -519,16 +516,13 @@ class CommentsInputWidget extends StatelessWidget {
         maxLines: null,
         controller: commentsController,
         // onTap: () {},
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium,
+
         decoration: InputDecoration(
             hintText: "",
             label: Text(
               "Комментарий",
-              style: TextStyle(color: AppColors.color900),
+              style: TextStyle(color: palette.color900),
             ),
             border: InputBorder.none,
             suffixIcon: null),
@@ -683,12 +677,13 @@ class _DropdownWidgetState extends State<DropdownWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     return Container(
       width: 350,
       height: 40,
       padding: EdgeInsets.only(left: 10),
       decoration: BoxDecoration(
-        color: AppColors.color50,
+        color: palette.color50,
         boxShadow: [
           BoxShadow(
               color: Color.fromRGBO(0, 0, 0, 0.05),
@@ -697,8 +692,7 @@ class _DropdownWidgetState extends State<DropdownWidget> {
         ],
         border: Border.all(
             //Todo поменять на ошибку
-            color:
-                false ? Color.fromRGBO(255, 51, 51, 0.50) : AppColors.color900,
+            color: false ? Color.fromRGBO(255, 51, 51, 0.50) : palette.color900,
             width: false ? 2 : 1),
         borderRadius: BorderRadius.circular(9),
       ),
@@ -707,9 +701,10 @@ class _DropdownWidgetState extends State<DropdownWidget> {
         width: widget.width,
         child: DropdownButton<String>(
           value: selectedValue,
+          dropdownColor: palette.color100,
           hint: Text(
             widget.listOfValue[0],
-            style: TextStyle(fontSize: 16, color: AppColors.color900),
+            style: TextStyle(fontSize: 16, color: palette.color900),
           ),
           isExpanded: true,
           underline: SizedBox(),
@@ -718,7 +713,7 @@ class _DropdownWidgetState extends State<DropdownWidget> {
               value: value,
               child: Text(
                 value,
-                style: TextStyle(fontSize: 16, color: AppColors.color900),
+                style: TextStyle(fontSize: 16, color: palette.color900),
               ),
             );
           }).toList(),
@@ -754,6 +749,8 @@ class ExitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
+
     return Padding(
       padding: EdgeInsets.all(20),
       child: IconButton(
@@ -764,7 +761,7 @@ class ExitButton extends StatelessWidget {
           minHeight: 70.0,
         ),
         focusNode: FocusNode(skipTraversal: true),
-        color: AppColors.color50,
+        color: palette.color50,
         style: ButtonStyle(
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
@@ -776,9 +773,9 @@ class ExitButton extends StatelessWidget {
           backgroundColor: WidgetStateProperty.resolveWith<Color?>(
             (states) {
               if (states.contains(WidgetState.hovered)) {
-                return AppColors.color800;
+                return palette.color800;
               }
-              return AppColors.color900;
+              return palette.color900;
             },
           ),
         ),

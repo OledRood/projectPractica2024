@@ -3,8 +3,9 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../bloc/bloc.dart';
-import '../resources/app_colors.dart';
+import '../resources/theme/theme.dart';
 import '../widgets/resume_list_widget.dart';
+import 'admin/admin_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -17,18 +18,17 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
+    final palette = Provider.of<AppTheme>(context).palette;
     return StreamBuilder<Role?>(
         stream: bloc.observeRoleSubject(),
         builder: (context, snapshot) {
           if (!snapshot.hasData || snapshot.data == null) {
-            print('роль не прошла полуаается');
             return Center(
               child: CircularProgressIndicator(
-                color: AppColors.color900,
+                color: palette.color900,
               ),
             );
           }
-          print("Snapshot: ${snapshot.data}");
           switch (snapshot.data) {
             case null:
               return Scaffold(
@@ -40,7 +40,7 @@ class _MainPageState extends State<MainPage> {
                 children: [
                   Text(
                     "Что-то сломалось попробуйте снова",
-                    style: TextStyle(color: AppColors.color900),
+                    style: TextStyle(color: palette.color900),
                   ),
                   SizedBox(
                     height: 10,
@@ -56,7 +56,7 @@ class _MainPageState extends State<MainPage> {
                     child: Container(
                       height: 70,
                       width: 100,
-                      color: AppColors.color900,
+                      color: palette.color900,
                       child: Icon(
                         Icons.refresh,
                         color: Colors.white,
@@ -72,18 +72,7 @@ class _MainPageState extends State<MainPage> {
               bloc.getAllResumeToMainPage();
               return MainPageContent(role: Role.hr_lead);
             case Role.admin:
-              return Scaffold(
-                  body: Center(
-                      child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                    Text(
-                      "Страница admin'а",
-                      style: TextStyle(color: AppColors.color900),
-                    ),
-                  ])));
+              return AdminPageContent();
             // TODO: Handle this case.
           }
         });
@@ -102,12 +91,12 @@ class MainPageContent extends StatefulWidget {
 class _MainPageContentState extends State<MainPageContent> {
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     final Bloc bloc = Provider.of<Bloc>(context, listen: false);
     bloc.sendGetResumeList();
     return Scaffold(
-      backgroundColor: AppColors.color50,
+      backgroundColor: palette.color50,
       body: LayoutBuilder(builder: (context, constraint) {
-        print(constraint.maxWidth);
         return Column(
           children: [
             SizedBox(height: 20),
@@ -140,7 +129,6 @@ class _MainPageContentState extends State<MainPageContent> {
                             context, '/MainPage/CreateResumePage');
                       },
                       displayWidth: constraint.maxWidth,
-
                     ),
                     SizedBox(height: 20),
                     //Статистика
@@ -152,8 +140,15 @@ class _MainPageContentState extends State<MainPageContent> {
                             context, '/MainPage/StatisticsPage');
                       },
                       displayWidth: constraint.maxWidth,
-
                     ),
+                    SizedBox(height: 20),
+                    ButtonWidget(
+                        onPress: () {
+                          Navigator.pushNamed(
+                              context, "/MainPage/ChangeColorPage");
+                        },
+                        text: "Сменить тему",
+                        displayWidth: constraint.maxWidth),
                     SizedBox(height: 20),
                     //Выход
                     ButtonWidget(
@@ -166,7 +161,6 @@ class _MainPageContentState extends State<MainPageContent> {
                         );
                       },
                       displayWidth: constraint.maxWidth,
-
                     ),
                     // SizedBox(height: 357)
                   ],
@@ -174,15 +168,17 @@ class _MainPageContentState extends State<MainPageContent> {
                 SizedBox(
                   width: 20,
                 ),
-                (constraint.maxWidth >= 738) ? Column(
-                  children: [
-                    //список текущих резюме
-                     ListOfResumeWidget() ,
-                    SizedBox(
-                      height: 20,
-                    ),
-                  ],
-                ) : SizedBox.shrink(),
+                (constraint.maxWidth >= 738)
+                    ? Column(
+                        children: [
+                          //список текущих резюме
+                          ListOfResumeWidget(),
+                          SizedBox(
+                            height: 20,
+                          ),
+                        ],
+                      )
+                    : SizedBox.shrink(),
                 SizedBox(
                   width: 1,
                 ),
@@ -202,29 +198,34 @@ class ButtonWidget extends StatelessWidget {
   final VoidCallback onPress;
   final String text;
   final double displayWidth;
+
   const ButtonWidget({
     super.key,
     required this.onPress,
-    required this.text, required this.displayWidth,
+    required this.text,
+    required this.displayWidth,
   });
 
   @override
   Widget build(BuildContext context) {
+    final palette = Provider.of<AppTheme>(context).palette;
     TextButtonState textButtonState = getTextWidgetState(displayWidth);
+
     return TextButton(
         onPressed: onPress,
         style: ButtonStyle(
           alignment: Alignment.center,
           // maximumSize: WidgetStatePropertyAll(Size(300, 75)),
           // minimumSize: WidgetStatePropertyAll((Size(150, 75))),
-          fixedSize: WidgetStatePropertyAll(getSizeByState(textButtonState, displayWidth)),
+          fixedSize: WidgetStatePropertyAll(
+              getSizeByState(textButtonState, displayWidth)),
           shadowColor: WidgetStatePropertyAll(Colors.black),
           elevation: WidgetStatePropertyAll(2),
           splashFactory: NoSplash.splashFactory,
           overlayColor: WidgetStateProperty.resolveWith<Color?>(
             (Set<WidgetState> states) {
               if (states.contains(WidgetState.pressed)) {
-                return AppColors.color900.withOpacity(0.3);
+                return palette.color900.withOpacity(0.3);
               }
               return null;
             },
@@ -232,26 +233,27 @@ class ButtonWidget extends StatelessWidget {
           backgroundColor: WidgetStateProperty.resolveWith<Color?>(
             (states) {
               if (states.contains(WidgetState.hovered)) {
-                return AppColors.color300;
+                return palette.color300;
               }
               // else if (states.contains(WidgetState.pressed)) {
-              //   return AppColors.color900;}
+              //   return palette.color900;}
               else if (states.contains(WidgetState.focused)) {
-                return AppColors.color300;
+                return palette.color300;
               }
-              return AppColors.color100;
+              return palette.color100;
             },
           ),
-          foregroundColor: WidgetStateProperty.resolveWith<Color?>(
-            (states) {
-              if (states.contains(WidgetState.hovered)) {
-                return Colors.white;
-              } else if (states.contains(WidgetState.focused)) {
-                return Colors.white;
-              }
-              return Colors.black;
-            },
-          ),
+          // foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+          //   (states) {
+          //     if (states.contains(WidgetState.hovered)) {
+          //       return palette.colorSelectedText;
+          //     } else if (states.contains(WidgetState.focused)) {
+          //       return palette.colorSelectedText;
+          //     }
+          //     return palette.colorText;
+          //   },
+          // ),
+
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
@@ -260,8 +262,9 @@ class ButtonWidget extends StatelessWidget {
         ),
         child: Text(text));
   }
-  Size getSizeByState(TextButtonState textButtonState, double displayWidth){
-    switch(textButtonState){
+
+  Size getSizeByState(TextButtonState textButtonState, double displayWidth) {
+    switch (textButtonState) {
       case TextButtonState.big:
         return Size(300, 75);
       case TextButtonState.adaptive:
@@ -275,7 +278,7 @@ class ButtonWidget extends StatelessWidget {
     if (displayWidth > 888) {
       return TextButtonState.big;
     } else if (displayWidth < 888 && displayWidth >= 738) {
-     return TextButtonState.adaptive;
+      return TextButtonState.adaptive;
     } else {
       return TextButtonState.small;
     }
@@ -283,3 +286,4 @@ class ButtonWidget extends StatelessWidget {
 }
 
 enum TextButtonState { big, adaptive, small }
+

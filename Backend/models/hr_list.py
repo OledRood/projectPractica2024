@@ -3,6 +3,8 @@ from flask.cli import load_dotenv
 import mysql
 import mysql.connector
 
+from models.token_operation import get_id_by_token
+
 
 load_dotenv()
 db_config = {
@@ -45,7 +47,11 @@ def isHrlead(user_id, cursor):
         return False
     
     
-def get_lists(user_id):
+def get_lists(token):
+    user_id = get_id_by_token(token)
+    if(user_id == False):
+        return {'vacancy' : 'error'}
+    
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor(dictionary=True)
     result = {}

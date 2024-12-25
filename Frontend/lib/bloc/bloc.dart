@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:hr_monitor/models/admin/users_data.dart';
 import 'package:hr_monitor/models/resume_list.dart';
 import 'package:hr_monitor/pages/create_resume_page.dart';
-import 'package:hr_monitor/pages/resume_info_page.dart';
+import 'package:hr_monitor/pages/info_resume_page.dart';
 import 'package:hr_monitor/types/resume_statistics.dart';
 import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
@@ -15,11 +16,12 @@ import '../models/statistics/statistics.dart';
 import '../resources/api_routes.dart';
 import '../resources/roles.dart';
 import '../types/full_resume.dart';
+import 'admin.dart';
 
 class Bloc {
   final usernameControllerSubject = BehaviorSubject<String>.seeded('');
   final passwordControllerSubject = BehaviorSubject<String>.seeded('');
-  final userIdSubject = BehaviorSubject<int>();
+  final userTokenSubject = BehaviorSubject<String>();
   final roleSubject = BehaviorSubject<Role>();
 
   Stream<Role> observeRoleSubject() => roleSubject;
@@ -72,7 +74,7 @@ class Bloc {
       (searchResult) {
         if (searchResult[1] == 200) {
           if (searchResult[0]['result'] == true) {
-            userIdSubject.add(searchResult[0]['id']);
+            userTokenSubject.add(searchResult[0]['token']);
 
             roleSubject.add(Roles.getRole(searchResult[0]['role'])!);
             sendGetResumeList();
@@ -127,13 +129,13 @@ class Bloc {
   }
 
   Future saveUserData() async {
-    final int userId = userIdSubject.value;
+    final String userToken = userTokenSubject.value;
     final String userName = usernameControllerSubject.value;
     final String password = passwordControllerSubject.value;
 
     final prefs = await SharedPreferences.getInstance();
     final data = jsonEncode(
-        {"user_id": userId, "password": password, 'user_name': userName});
+        {"userToken": userToken, "password": password, 'user_name': userName});
     await prefs.setString(
         "data", data); // Сохраняем значение 'id' с ключом 'user_id'
   }
@@ -145,15 +147,15 @@ class Bloc {
 
     if (jsonData != null) {
       final Map<String, dynamic> data = jsonDecode(jsonData);
-      final int userId = data["user_id"] ?? "";
+      final String userToken = data["userToken"] ?? "";
       final String userName = data["user_name"] ?? "";
       final String password = data["password"] ?? "";
 
-      if (userId != -1 && userName != '' && password != '') {
+      if (userToken != -1 && userName != '' && password != '') {
         // Выводим значения или используем их
         passwordControllerSubject.add(password);
         usernameControllerSubject.add(userName);
-        userIdSubject.add(userId);
+        userTokenSubject.add(userToken);
         sendPassWordAndLogin();
       }
     }
@@ -185,6 +187,9 @@ class Bloc {
       resultResumeListToMainPageSubject.add(resumes);
       resumeMainPageListStateSubject.add(StateRequest.good);
     }, onError: (error, stackTrace) {
+      if (error == 'token error') {
+        resumeMainPageListStateSubject.add(StateRequest.tokenError);
+      }
       resumeMainPageListStateSubject.add(StateRequest.error);
       print('OnError getAllResumeToMainPage: $error');
     });
@@ -193,14 +198,17 @@ class Bloc {
   // Future<List<FullResumeInfo>> requestToGetHrResume(bool isArchiv) async {
 
   Future<List<FullResumeInfo>> requestToGetAllResumesToMainPage() async {
-    final userId = userIdSubject.value;
-    final body = json.encode({"user_id": userId});
+    final userToken = userTokenSubject.value;
+    final body = json.encode({"token": userToken});
     final headers = Routes.headers;
     var response = await http.post(Uri.parse(Routes.getResumeToMainPage),
         headers: headers, body: body);
     if (response.statusCode == 200) {
       final List<dynamic> result = json.decode(response.body);
-
+      if (result[0]['resume_id'] != null &&
+          result[0]['resume_id'] == 'token error') {
+        throw Exception('token error');
+      }
       //Здесь мы декодируем полученный json в Map<String, dynamic> каждую строчку
       final List<Resume> resumes = result.map((rawResume) {
         return Resume.fromJson(rawResume);
@@ -237,6 +245,7 @@ class Bloc {
 
   void sendResumeToUpdate() {
     stateUpdateRequest.add(StateRequest.loading);
+    String userToken = userTokenSubject.value;
     final resumeData = getResumeInfoFromSubject();
     requestToUpdateSubscription?.cancel();
     requestToUpdateSubscription = requestToUpdateResume(
@@ -248,12 +257,15 @@ class Bloc {
             comments: resumeData.comments,
             archiv: resumeData.archiv,
             status: resumeData.status,
-            hrName: resumeData.hrName)
+            hrName: resumeData.hrName,
+            userToken: userToken)
         .asStream()
         .listen((createAnswer) {
       if (createAnswer == "good") {
         getAllResumeToMainPage();
         stateUpdateRequest.add(StateRequest.good);
+      } else if (createAnswer == 'token error') {
+        stateUpdateRequest.add(StateRequest.tokenError);
       } else {
         stateUpdateRequest.add(StateRequest.error);
       }
@@ -273,6 +285,7 @@ class Bloc {
     required int archiv,
     required String status,
     required String hrName,
+    required String userToken,
   }) async {
     var headers = Routes.headers;
     var request = http.Request('POST', Uri.parse(Routes.updateResume));
@@ -285,7 +298,8 @@ class Bloc {
       'comments': comments,
       "archiv": archiv,
       "status": status,
-      'hr_name': hrName
+      'hr_name': hrName,
+      'token': userToken
     });
     request.headers.addAll(headers);
 
@@ -346,7 +360,7 @@ class Bloc {
     final resume = getResumeInfoFromSubject();
     final age = (resume.age == -1) ? "" : resume.age.toString();
     final String status = (resume.status == 'Любой') ? "" : resume.status;
-    final userId = userIdSubject.value;
+    final userToken = userTokenSubject.value;
     final String hrName = (resume.hrName == "Любой") ? '' : resume.hrName;
     final searchText = searchTextControllerSubject.value;
     final fromDateText = resumeFromDateTimeSubject.value == null
@@ -365,7 +379,7 @@ class Bloc {
       archiv: resume.archiv ?? "",
       status: status,
       searchText: searchText ?? "",
-      userId: userId,
+      userToken: userToken,
       hrName: hrName,
       fromDateText: fromDateText,
       toDateText: toDateText,
@@ -377,6 +391,8 @@ class Bloc {
           stateSearchListWidget.add(StateRequest.good);
           resumeToSearchResultSubject.add(resultValue[0]);
         }
+      } else if (resultValue[1] == 401) {
+        stateSearchListWidget.add(StateRequest.tokenError);
       } else {
         stateSearchListWidget.add(StateRequest.error);
       }
@@ -394,7 +410,7 @@ class Bloc {
       required int archiv,
       required String status,
       required String searchText,
-      required int userId,
+      required String userToken,
       required String hrName,
       required fromDateText,
       required toDateText}) async {
@@ -406,7 +422,7 @@ class Bloc {
       "source": source,
       "archiv": archiv,
       "status": status,
-      'user_id': userId,
+      'token': userToken,
       'hr_name': hrName,
       "from_date": fromDateText,
       'to_date': toDateText,
@@ -417,6 +433,10 @@ class Bloc {
     if (response.statusCode == 200) {
       final List<dynamic> result = json.decode(response.body);
 
+      if (result[0]['resume_id'] != null &&
+          result[0]['resume_id'] == 'token error') {
+        return ['token error', 401];
+      }
       //Здесь мы декодируем полученный json в Map<String, dynamic> каждую строчку
       final List<Resume> resumes = result.map((rawResume) {
         //Ошибка здесь
@@ -463,8 +483,8 @@ class Bloc {
   Future sendResumeToCreate() async {
     final resumeData = getResumeInfoFromSubject();
 
-    final user_id = userIdSubject.value;
-    if (user_id != -1 && resumeData.age != -1) {
+    final userToken = userTokenSubject.value;
+    if (userToken != -1 && resumeData.age != -1) {
       stateCreateButtonSubject.add(StateRequest.loading);
       resumeToCreateSubscription?.cancel();
       resumeToCreateSubscription = requestToCreateResume(
@@ -472,13 +492,15 @@ class Bloc {
               age: resumeData.age,
               source: resumeData.source,
               name: resumeData.fullName,
-              id: user_id,
+              userToken: userToken,
               hrName: resumeData.hrName,
               comments: resumeData.comments)
           .asStream()
           .listen((searchResult) {
         if (searchResult == 'good') {
           stateCreateButtonSubject.add(StateRequest.good);
+        } else if (searchResult == "token error") {
+          stateCreateButtonSubject.add(StateRequest.tokenError);
         } else {
           stateCreateButtonSubject.add(StateRequest.error);
         }
@@ -494,7 +516,7 @@ class Bloc {
     required int age,
     required String source,
     required String name,
-    required int id,
+    required String userToken,
     required String hrName,
     required String comments,
   }) async {
@@ -504,7 +526,7 @@ class Bloc {
       "age": "$age",
       "name": name,
       "source": source,
-      "id": id,
+      "token": userToken,
       'comments': comments,
       'hr_name': hrName,
     });
@@ -525,41 +547,36 @@ class Bloc {
   StreamSubscription? getResumeListSubscription;
 
   void sendGetResumeList() {
-    final int userId = userIdSubject.value;
+    final String userToken = userTokenSubject.value;
     getResumeListSubscription?.cancel();
     getResumeListSubscription =
-        requestGetResumeLists(userId).asStream().listen((result) {
+        requestGetResumeLists(userToken).asStream().listen((result) {
       if (result != null) {
         resumeListSubject.add(result);
       } else {
-        resumeListSubject.add(ResumeList(
-          vacancy: ["Error", "Сообщите", 'Пожалуйста', "Админу"],
-          hrList: ["Error", "Сообщите", 'Пожалуйста', "Админу"],
-          source: ["Error", "Сообщите", 'Пожалуйста', "Админу"],
-        ));
+        resumeListSubject.add(ResumeList());
       }
 
       //Ковертируем jsArray в list<string>
       // List<String> result =
       //     List<String>.from(hrList.map((item) => item.toString()));
     }, onError: (error) {
-      resumeListSubject.add(ResumeList(
-        vacancy: ["Error", "Сообщите", 'Пожалуйста', "Админу"],
-        hrList: ["Error", "Сообщите", 'Пожалуйста', "Админу"],
-        source: ["Error", "Сообщите", 'Пожалуйста', "Админу"],
-      ));
+      resumeListSubject.add(ResumeList());
       print('Error in sendGetResumeList: $error');
     });
   }
 
-  Future<ResumeList?> requestGetResumeLists(int userId) async {
-    final body = json.encode({"user_id": userId});
+  Future<ResumeList?> requestGetResumeLists(String userToken) async {
+    final body = json.encode({"token": userToken});
     final headers = Routes.headers;
     var response = await http.post(Uri.parse(Routes.getLists),
         headers: headers, body: body);
     if (response.statusCode == 200) {
       final result = json.decode(response.body);
-
+      if (result["vacancy"] == "token error") {
+        print('error token in search with filters');
+        return null;
+      }
       // final List<Statistics> resumeStat = result.values.map((rawResume) {
       //   return Statistics.fromJson(rawResume);
       // }).toList();
@@ -604,13 +621,16 @@ class Bloc {
   }
 
   Future statisticsRequest() async {
-    final userId = userIdSubject.value;
-    final body = json.encode({"user_id": userId});
+    final userToken = userTokenSubject.value;
+    final body = json.encode({"token": userToken});
     final headers = Routes.headers;
     var response = await http.post(Uri.parse(Routes.getStatistic),
         headers: headers, body: body);
     if (response.statusCode == 200) {
       final Map<String, dynamic> result = json.decode(response.body);
+      if (result["name"] == 'token error') {
+        throw Exception('token error');
+      }
 
       final List<Statistics> resumeStat = result.values.map((rawResume) {
         return Statistics.fromJson(rawResume);
@@ -653,14 +673,130 @@ class Bloc {
 
   Future<void> deleteUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = jsonEncode({"user_id": -1, "role": "", 'password': ""});
+    final data = jsonEncode({"userToken": -1, "role": "", 'password': ""});
     await prefs.setString("data", data);
+  }
+
+//TODO CreateUserPage-------------------------------------------------------------------------------
+  StreamSubscription? userToCreateSubscription;
+  final createUsernameSubject = BehaviorSubject.seeded('');
+  final createUserRoleSubject = BehaviorSubject.seeded('');
+  final createUserPasswordSuject = BehaviorSubject.seeded('');
+  final createUsersHrLeadSuject = BehaviorSubject.seeded('');
+  final stateCreateUserButtonSubject =
+      BehaviorSubject<StateRequest>.seeded(StateRequest.none);
+
+  Future sendUserToCreate() async {
+    if (userTokenSubject.value != "") {
+      stateCreateButtonSubject.add(StateRequest.loading);
+      userToCreateSubscription?.cancel();
+      userToCreateSubscription = Admin()
+          .requestToCreateUser(
+              username: createUsernameSubject.value,
+              userRole: createUserRoleSubject.value,
+              userToken: userTokenSubject.value,
+              userPassword: createUserPasswordSuject.value,
+              hrLead: createUsersHrLeadSuject.value)
+          .asStream()
+          .listen((searchResult) {
+        if (searchResult == 'good') {
+          stateCreateButtonSubject.add(StateRequest.good);
+        } else {
+          stateCreateButtonSubject.add(StateRequest.error);
+        }
+      }, onError: (e) {
+        print('Error in Create Resume: $e');
+        if (e == 'Token error') {
+          stateCreateButtonSubject.add(StateRequest.error);
+        } else {
+          stateCreateButtonSubject.add(StateRequest.error);
+        }
+      });
+    }
+  }
+
+  void cleanUsersController() {
+    createUsernameSubject.add('');
+    createUserRoleSubject.add('');
+    createUserPasswordSuject.add('');
+  }
+
+  StreamSubscription? getUsersListSubject;
+  final usersListSubject = BehaviorSubject<List<UserTable>>();
+  final usersListState =
+      BehaviorSubject<StateRequest>.seeded(StateRequest.none);
+
+  Stream<StateRequest> observeUsersListState() => usersListState;
+  Stream<List<UserTable>> observeUsersList() => usersListSubject;
+
+  void sendGetUsersList() {
+    usersListState.add(StateRequest.loading);
+    getUsersListSubject?.cancel();
+    getUsersListSubject = Admin()
+        .requestGetUsersList(userTokenSubject.value)
+        .asStream()
+        .listen((result) {
+      if (result != null) {
+        // print('data in sendGetUsersList: ${result.map((data) => UserTable.fromJson(data)).toList()}');
+
+        usersListSubject.add(result.map((data) => UserTable.fromJson(data)).toList());
+        usersListState.add(StateRequest.good);
+      } else {
+        usersListSubject.add([]);
+        usersListState.add(StateRequest.nothingFound);
+      }
+    }, onError: (error) {
+      usersListSubject.add([]);
+      print('Error in sendGetUsersList: $error');
+      usersListState.add(StateRequest.serverError);
+    });
+  }
+
+//TODO AdminsTableData
+
+  StreamSubscription? hrLeadListSubscription;
+  final hrLeadListSubject = BehaviorSubject<List<String>>();
+
+  Stream<List<String>> observeHrLeadList() => hrLeadListSubject;
+
+  void sendGetHrLeadList() {
+    hrLeadListSubscription?.cancel();
+    hrLeadListSubscription = Admin()
+        .requestGetLists(userTokenSubject.value, Routes.getHrLeadList)
+        .asStream()
+        .listen((result) {
+      if (result != null) {
+        hrLeadListSubject.add(result as List<String>);
+      } else {
+        hrLeadListSubject.add([]);
+      }
+    }, onError: (error) {
+      hrLeadListSubject.add([]);
+      print('Error in sendGetHrLeadList: $error');
+    });
+  }
+
+  StreamSubscription? userDatabaseSubscription;
+  final userDatabaseSubject = BehaviorSubject<UsersData>();
+
+  Stream<UsersData> observeUserData() => userDatabaseSubject;
+
+  void sendGetUserDataBase() {
+    userDatabaseSubscription?.cancel();
+    userDatabaseSubscription = Admin()
+        .requestGetUserDatabase(userTokenSubject.value)
+        .asStream()
+        .listen((restult) {
+      userDatabaseSubject.add(restult);
+    }, onError: (error) {
+      print("Error in sendGetUserDataBase, $error");
+    });
   }
 
   dispose() {
     usernameControllerSubject.close();
     passwordControllerSubject.close();
-    userIdSubject.close();
+    userTokenSubject.close();
     stateLogInSubject.close();
     stateLogInPageContentSubject.close();
     entranceRequestSubscription?.cancel();
@@ -688,6 +824,13 @@ class Bloc {
     statisticSubscription?.cancel();
     stateStatisticRequest.close();
     statisticsSubject.close();
+    createUsernameSubject.close();
+    createUserRoleSubject.close();
+    createUserPasswordSuject.close();
+    stateCreateUserButtonSubject.close();
+    getUsersListSubject?.cancel();
+    usersListSubject.close();
+    createUsersHrLeadSuject.close();
   }
 }
 
@@ -700,6 +843,7 @@ enum StateRequest {
   good,
   error,
   nothingFound,
+  tokenError,
 }
 
 enum Role { hr, hr_lead, admin }
