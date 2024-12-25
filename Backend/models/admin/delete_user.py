@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import mysql.connector
 
 from models.admin.create_user import isAdmin
-from models.token_operation import get_id_by_token
+from routes.token_operation import get_id_by_token
 
 
 load_dotenv()

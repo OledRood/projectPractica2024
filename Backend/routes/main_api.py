@@ -11,7 +11,7 @@ from routes.admin_api import admin_api
 app = Flask(__name__)
 CORS(app)
 
-SECRET_KEY = 'secret_key'
+
 
 app.register_blueprint(resume_api, url_prefix='/resume')
 app.register_blueprint(admin_api, url_prefix='/admin')

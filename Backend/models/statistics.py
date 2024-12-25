@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import mysql
 
 from models.resume import get_hr_list
-from models.token_operation import get_id_by_token
+from routes.token_operation import get_id_by_token
 
 load_dotenv()
 db_config = {

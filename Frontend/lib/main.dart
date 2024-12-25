@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hr_monitor/pages/admin/change_and_delete_user_page.dart';
 import 'package:hr_monitor/pages/admin/create_user_page.dart';
+import 'package:hr_monitor/pages/admin/user_tables_page.dart';
 import 'package:hr_monitor/pages/change_color_page.dart';
 import 'package:hr_monitor/pages/create_resume_page.dart';
 import 'package:hr_monitor/pages/entrance_page.dart';
@@ -70,8 +71,8 @@ class MyApp extends StatelessWidget {
             case '/MainPage/ChangeAndDeleteUser':
               final user = settings.arguments as UserTable;
               return MaterialPageRoute(builder: (context) => ChangeAndDeleteUserPage(user: user));
-          // case '/MainPage/UserTablePage':
-          //   return MaterialPageRoute(builder: (context) => UsersTablesPage());
+          case '/MainPage/UserTablePage':
+            return MaterialPageRoute(builder: (context) => UsersTablesPage());
           default:
             return null;
         }
